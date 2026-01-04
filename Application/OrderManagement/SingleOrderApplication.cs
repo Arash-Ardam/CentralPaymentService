@@ -1,4 +1,4 @@
-﻿using Application.OrderManagement.Dtos;
+﻿using Application.Abstractions;
 using Application.OrderManagement.Dtos.SingleOrder;
 using Application.OrderManagement.Mappings;
 using Application.OrderManagement.Services;

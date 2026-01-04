@@ -1,4 +1,5 @@
-﻿using Application.Accounting.BankApp.Dtos;
+﻿using Application.Abstractions;
+using Application.Accounting.BankApp.Dtos;
 using Application.Accounting.BankApp.Events;
 using Domain.Banking.Bank;
 using Domain.Banking.Bank.Enums;
@@ -20,56 +21,103 @@ namespace Application.Accounting.BankApp
 			_mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
 		}
 
-		public async Task<Guid> CreateBank(CreateBankDto bankDto)
+		public async Task<ApplicationResponse<Guid>> CreateBank(CreateBankDto bankDto)
 		{
-			bool isExist = await _bankIdentifierService.IsBankExists(bankDto.Name, bankDto.BankCode);
+			var response = new ApplicationResponse<Guid>();
+			try
+			{
+				bool isExist = await _bankIdentifierService.IsBankExists(bankDto.Name, bankDto.BankCode);
 
-			if (isExist)
-				throw new ArgumentException($"The given Bank with name:{bankDto.Name} and code:{bankDto.BankCode} already excists");
+				if (!isExist)
+					throw new ArgumentException($"The given Bank with name:{bankDto.Name} and code:{bankDto.BankCode} already excists");
 
-			Bank newBank = new Bank(bankDto.Name, bankDto.BankCode);
+				Bank newBank = new Bank(bankDto.Name, bankDto.BankCode);
 
-			var createdBank = await _bankRepository.AddAsync(newBank);
+				var createdBank = await _bankRepository.AddAsync(newBank);
 
-			return createdBank.Id;
+				response.Data = createdBank.Id;
+				response.Message = "Bank created successfully";
+				return response;
+
+			}
+			catch (Exception ex)
+			{
+				response.IsSuccess = false;
+				response.Message = ex.Message;
+				return response;
+			}
 		}
 
-		public async Task AddPaymentServiceType(Guid bankId,ServiceTypes service)
+		public async Task<ApplicationResponse> AddPaymentServiceType(Guid bankId,ServiceTypes service)
 		{
-			Bank? targetBank = await _bankRepository.GetAsync(bankId);
-			if (targetBank == null)
-				throw new ArgumentException("given target bank is not excists");
+			var response = new ApplicationResponse() { IsSuccess = true };
+			try
+			{
+				Bank targetBank = await _bankRepository.GetAsync(bankId)
+					?? throw new ArgumentException("given target bank is not excists");
 
-			targetBank.AddService(service);
+				targetBank.AddService(service);
 
-			await _bankRepository.EditAsync(targetBank);
+				await _bankRepository.EditAsync(targetBank);
+
+				response.Message = "Payment service added to bank successfully";
+				return response;
+			}
+			catch (Exception ex)
+			{
+				response.IsSuccess = false;
+				response.Message = ex.Message;
+				return response;
+			}
 		}
 
-		public async Task RemovePaymentServiceType(Guid bankId, ServiceTypes service)
+		public async Task<ApplicationResponse> RemovePaymentServiceType(Guid bankId, ServiceTypes service)
 		{
-			Bank? targetBank = await _bankRepository.GetAsync(bankId);
-			if (targetBank == null)
-				throw new ArgumentException("given target bank is not excists");
+			var response = new ApplicationResponse() { IsSuccess = true };
+			try
+			{
+				Bank targetBank = await _bankRepository.GetAsync(bankId)
+					?? throw new ArgumentException("given target bank is not excists");
 
-			targetBank.RemoveService(service);
+				targetBank.RemoveService(service);
 
-			await _bankRepository.EditAsync(targetBank);
+				await _bankRepository.EditAsync(targetBank);
+
+				response.Message = "Payment service removed from bank";
+				return response;
+			}
+			catch (Exception ex)
+			{
+				response.IsSuccess = false;
+				response.Message = ex.Message;
+				return response;
+			}
 		}
 
-
-		public async Task ChangeStatusAsync(Guid bankId, bool status)
+		public async Task<ApplicationResponse> ChangeStatusAsync(Guid bankId, bool status)
 		{
-			Bank? targetBank = await _bankRepository.GetAsync(bankId);
-			if (targetBank == null)
-				throw new ArgumentException("given target bank is not excists");
+			var response = new ApplicationResponse() { IsSuccess = true };
+			try
+			{
+				Bank targetBank = await _bankRepository.GetAsync(bankId)
+					?? throw new ArgumentException("given target bank is not excists");
 
-			targetBank.ChangeStatus(status);
+				targetBank.ChangeStatus(status);
 
-			await _bankRepository.EditAsync(targetBank);
+				await _bankRepository.EditAsync(targetBank);
 
-			// raise disable related accounts event
-			await _mediator.Publish(new BankStatusChangedEvent(bankId, status));
+				// raise disable related accounts event
+				await _mediator.Publish(new BankStatusChangedEvent(bankId, status));
+
+				response.Message = "Bank status changed successfully";
+				return response;
+			}
+			catch (Exception ex)
+			{
+				response.IsSuccess = false;
+				response.Message = ex.Message;
+				return response;
+			}
 		}
-
 	}
 }

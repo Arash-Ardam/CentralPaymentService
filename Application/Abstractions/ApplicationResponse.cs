@@ -1,4 +1,4 @@
-﻿namespace Application.OrderManagement.Dtos
+﻿namespace Application.Abstractions
 {
 	public class ApplicationResponse<T>
 	{

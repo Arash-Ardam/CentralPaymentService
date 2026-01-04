@@ -1,23 +1,25 @@
-﻿using Application.Accounting.AccountApp.Dtos;
+﻿using Application.Abstractions;
+using Application.Accounting.AccountApp.Dtos;
 using Domain.Banking.Account;
 using Domain.Banking.Account.Services;
 using Domain.Banking.Bank;
 using Domain.Customer;
+using System.Runtime.InteropServices;
 
 namespace Application.Accounting.AccountApp
 {
 	internal class AccountApplication
 	{
-		public Domain.Banking.Account.IAccountRepository _accountRepository { get; }
+		public IAccountRepository _accountRepository { get; }
 		public ICustomerRepository _customerRepository { get; }
 		public IBankRepository _bankRepository { get; }
-		public Domain.Banking.Account.Services.IAccountIdentifierService _accountIdentifierService { get; }
+		public IAccountIdentifierService _accountIdentifierService { get; }
 
 		public AccountApplication(
-			Domain.Banking.Account.IAccountRepository accountRepository,
+			IAccountRepository accountRepository,
 			ICustomerRepository customerRepository,
 			IBankRepository bankRepository,
-			Domain.Banking.Account.Services.IAccountIdentifierService accountIdentifierService)
+			IAccountIdentifierService accountIdentifierService)
 		{
 			_accountRepository = accountRepository ?? throw new ArgumentNullException(nameof(accountRepository));
 			_customerRepository = customerRepository ?? throw new ArgumentNullException(nameof(customerRepository));
@@ -25,131 +27,204 @@ namespace Application.Accounting.AccountApp
 			_accountIdentifierService = accountIdentifierService ?? throw new ArgumentNullException(nameof(accountIdentifierService));
 		}
 
-		public async Task<Guid> CreateAsync(CreateAccountDto createAccountDto)
+		public async Task<ApplicationResponse<Guid>> CreateAsync(CreateAccountDto createAccountDto)
 		{
-			var targetBank = await _bankRepository.GetAsync(createAccountDto.BankId);
-			if (targetBank == null)
-				throw new ArgumentException($"given target bank with Id: {createAccountDto.BankId} not exists");
+			var response = new ApplicationResponse<Guid>() { IsSuccess = true };
 
-			var targetCustomer = await _customerRepository.GetAsync(createAccountDto.CustomerId);
-			if (targetCustomer == null)
-				throw new ArgumentException($"given target customer with Id: {createAccountDto.CustomerId} not exists");
+			try
+			{
+				var targetBank = await _bankRepository.GetAsync(createAccountDto.BankId)
+				?? throw new ArgumentException($"given target bank with Id: {createAccountDto.BankId} not exists");
 
-			var isAccountExists = await _accountIdentifierService.IsExists(createAccountDto.Accountnumber, createAccountDto.Iban);
-			if (isAccountExists)
-				throw new ArgumentException($"given target account with AccountNumber:{createAccountDto.Accountnumber} and Iban: {createAccountDto.Iban} already exists");
+				var targetCustomer = await _customerRepository.GetAsync(createAccountDto.CustomerId)
+					?? throw new ArgumentException($"given target customer with Id: {createAccountDto.CustomerId} not exists");
 
-			var newAccount = new Account(createAccountDto.Accountnumber, createAccountDto.Iban, createAccountDto.ExpireDate);
+				var isAccountExists = await _accountIdentifierService.IsExists(createAccountDto.Accountnumber, createAccountDto.Iban);
+				if (!isAccountExists)
+					throw new ArgumentException($"given target account with AccountNumber:{createAccountDto.Accountnumber} and Iban: {createAccountDto.Iban} already exists");
 
-			newAccount.AssignToBank(targetBank.Id);
-			newAccount.AssignToCustomer(targetCustomer.Id);
+				var newAccount = new Account(createAccountDto.Accountnumber, createAccountDto.Iban, createAccountDto.ExpireDate);
 
-			var result = await _accountRepository.AddAsync(newAccount);
-			return result;
+				newAccount.AssignToBank(targetBank.Id);
+				newAccount.AssignToCustomer(targetCustomer.Id);
+
+				var result = await _accountRepository.AddAsync(newAccount);
+
+				response.Data = result;
+				response.Message = "Account created successfully";
+
+				return response;
+			}
+			catch (Exception ex)
+			{
+				response.IsSuccess = false;
+				response.Message = ex.Message;
+				return response;
+			}
 		}
 
-		public async Task<Guid> ChangeStatusAsync(Guid accountId,bool status)
+		public async Task<ApplicationResponse<Guid>> ChangeStatusAsync(Guid accountId,bool status)
 		{
-			var targetAccount = await _accountRepository.GetAsync(accountId);
-			if (targetAccount == null)
-				throw new ArgumentException("given target account not exists");
+			var response = new ApplicationResponse<Guid>() { IsSuccess = true };
 
-			targetAccount.ChangeStatus(status);
+			try
+			{
+				var targetAccount = await _accountRepository.GetAsync(accountId)
+					?? throw new ArgumentException("given target account not exists");
 
-			var result = await _accountRepository.EditAsync(targetAccount);
+				targetAccount.ChangeStatus(status);
 
-			return result;
+				var result = await _accountRepository.EditAsync(targetAccount);
+
+				response.Data = result;
+				response.Message = "Account status changed successfully";
+				return response;
+			}
+			catch (Exception ex)
+			{
+				response.IsSuccess = false;
+				response.Message = ex.Message;
+				return response;
+			}
 		}
 
-		public async Task<Guid> AddSinglePaymentSettings(SingleSettingsDto settingsDto)
+		public async Task<ApplicationResponse<Guid>> AddSinglePaymentSettings(SingleSettingsDto settingsDto)
 		{
-			var targetAccount = await _accountRepository.GetAsync(settingsDto.AccountId);
-			if (targetAccount == null)
-				throw new ArgumentException("given target account not exists");
+			var response = new ApplicationResponse<Guid>() { IsSuccess = true };
 
-			var settingFactory = AccountFactory.GetSinglePaymentSettingsFactory();
+			try
+			{
+				var targetAccount = await _accountRepository.GetAsync(settingsDto.AccountId)
+					?? throw new ArgumentException("given target account not exists");
 
-			if(!string.IsNullOrWhiteSpace(settingsDto.TerminalId))
-				settingFactory.WithTerminalId(settingsDto.TerminalId);
+				var settingFactory = AccountFactory.GetSinglePaymentSettingsFactory();
 
-			if(!string.IsNullOrWhiteSpace(settingsDto.MerchantId))
-				settingFactory.WithMerchantId(settingsDto.MerchantId);
+				if (!string.IsNullOrWhiteSpace(settingsDto.TerminalId))
+					settingFactory.WithTerminalId(settingsDto.TerminalId);
 
-			if(!string.IsNullOrWhiteSpace(settingsDto.username))
-				settingFactory.WithUsername(settingsDto.username);
+				if (!string.IsNullOrWhiteSpace(settingsDto.MerchantId))
+					settingFactory.WithMerchantId(settingsDto.MerchantId);
 
-			if(!string.IsNullOrWhiteSpace(settingsDto.password))
-				settingFactory.WithPassword(settingsDto.password);
+				if (!string.IsNullOrWhiteSpace(settingsDto.username))
+					settingFactory.WithUsername(settingsDto.username);
 
-			if (settingsDto.contractExpire.HasValue)
-				settingFactory.WithExpire(settingsDto.contractExpire.Value);
+				if (!string.IsNullOrWhiteSpace(settingsDto.password))
+					settingFactory.WithPassword(settingsDto.password);
 
-			var setting = settingFactory.Build();
+				if (settingsDto.contractExpire.HasValue)
+					settingFactory.WithExpire(settingsDto.contractExpire.Value);
 
-			targetAccount.PaymentSettings.SetSingleSettings(setting);
+				var setting = settingFactory.Build();
 
-			var result = await _accountRepository.EditAsync(targetAccount);
+				targetAccount.PaymentSettings.SetSingleSettings(setting);
 
-			return result;
+				var result = await _accountRepository.EditAsync(targetAccount);
+
+				response.Data = result;
+				response.Message = "Single settings added successfully";
+				return response;
+			}
+			catch (Exception ex)
+			{
+				response.IsSuccess = false;
+				response.Message = ex.Message;
+				return response;
+			}
 		}
 
-		public async Task ChangeSingleSettingsStatus(Guid accountId, bool status)
+		public async Task<ApplicationResponse> ChangeSingleSettingsStatus(Guid accountId, bool status)
 		{
-			var targetAccount = await _accountRepository.GetAsync(accountId);
-			if (targetAccount == null)
-				throw new ArgumentException("given target account not exists");
+			var response = new ApplicationResponse() { IsSuccess = true };
+			try
+			{
+				var targetAccount = await _accountRepository.GetAsync(accountId)
+					?? throw new ArgumentException("given target account not exists");
 
-			if (targetAccount.PaymentSettings.Single is null)
-				throw new Exception("There is no single settings for this account");
+				if (targetAccount.PaymentSettings.Single is null)
+					throw new Exception("There is no single settings for this account");
 
-			if (status)
-				targetAccount.PaymentSettings.Single.Enable();
-			else
-				targetAccount.PaymentSettings.Single.Disable();
+				if (status)
+					targetAccount.PaymentSettings.Single.Enable();
+				else
+					targetAccount.PaymentSettings.Single.Disable();
+
+				response.Message = "Single settings status changed successfully";
+				return response;
+			}
+			catch (Exception ex)
+			{
+				response.IsSuccess = false;
+				response.Message = ex.Message;
+				return response;
+			}
 		}
 
-		public async Task<Guid> AddBatchPaymentSettings(BatchSettingsDto settingsDto)
+		public async Task<ApplicationResponse<Guid>> AddBatchPaymentSettings(BatchSettingsDto settingsDto)
 		{
-			var targetAccount = await _accountRepository.GetAsync(settingsDto.AccountId);
-			if (targetAccount == null)
-				throw new ArgumentException("given target account not exists");
+			var response = new ApplicationResponse<Guid>() { IsSuccess = true };
+			try
+			{
+				var targetAccount = await _accountRepository.GetAsync(settingsDto.AccountId)
+					?? throw new ArgumentException("given target account not exists");
 
-			var settingsFactory = AccountFactory.GetBatchPaymentSettingsFactory();
+				var settingsFactory = AccountFactory.GetBatchPaymentSettingsFactory();
 
-			if(settingsDto.MaxTransactionsCount > 0)
-				settingsFactory.WithMaxTransactions(settingsDto.MaxTransactionsCount);
-			
-			if(settingsDto.MaxDailyAmount > 0)
-				settingsFactory.WithMaxDailyAmount(settingsDto.MaxDailyAmount);
+				if (settingsDto.MaxTransactionsCount > 0)
+					settingsFactory.WithMaxTransactions(settingsDto.MaxTransactionsCount);
 
-			if(settingsDto.MinSatnaAmount > 0)
-				settingsFactory.WithMinSatnaAmount(settingsDto.MinSatnaAmount);
+				if (settingsDto.MaxDailyAmount > 0)
+					settingsFactory.WithMaxDailyAmount(settingsDto.MaxDailyAmount);
 
-			if (settingsDto.ContractExpire.HasValue)
-				settingsFactory.WithExpirationDate(settingsDto.ContractExpire.Value);
+				if (settingsDto.MinSatnaAmount > 0)
+					settingsFactory.WithMinSatnaAmount(settingsDto.MinSatnaAmount);
 
-			var settings = settingsFactory.Build();
+				if (settingsDto.ContractExpire.HasValue)
+					settingsFactory.WithExpirationDate(settingsDto.ContractExpire.Value);
 
-			targetAccount.PaymentSettings.SetBatchSettings(settings);
+				var settings = settingsFactory.Build();
 
-			var result = await _accountRepository.EditAsync(targetAccount);
+				targetAccount.PaymentSettings.SetBatchSettings(settings);
 
-			return result;
+				var result = await _accountRepository.EditAsync(targetAccount);
+
+				response.Data = result;
+				response.Message = "Batch settings added successfully";
+				return response;
+			}
+			catch (Exception ex)
+			{
+				response.IsSuccess = false;
+				response.Message = ex.Message;
+				return response;
+			}
 		}
 
-		public async Task ChangeBatchSettingsStatus(Guid accountId, bool status)
+		public async Task<ApplicationResponse> ChangeBatchSettingsStatus(Guid accountId, bool status)
 		{
-			var targetAccount = await _accountRepository.GetAsync(accountId);
-			if (targetAccount == null)
-				throw new ArgumentException("given target account not exists");
+			var response = new ApplicationResponse() { IsSuccess = true };
+			try
+			{
+				var targetAccount = await _accountRepository.GetAsync(accountId);
+				if (targetAccount == null)
+					throw new ArgumentException("given target account not exists");
 
-			if (targetAccount.PaymentSettings.Batch is null)
-				throw new Exception("There is no batch settings for this account");
+				if (targetAccount.PaymentSettings.Batch is null)
+					throw new Exception("There is no batch settings for this account");
 
-			if (status)
-				targetAccount.PaymentSettings.Batch.Enable();
-			else
-				targetAccount.PaymentSettings.Batch.Disable();
+				if (status)
+					targetAccount.PaymentSettings.Batch.Enable();
+				else
+					targetAccount.PaymentSettings.Batch.Disable();
+
+				response.Message = "Batch settings status changed successfully";
+				return response;
+			}
+			catch (Exception ex)
+			{
+				response.IsSuccess = false;
+				response.Message = ex.Message;
+				return response;
+			}
 		}
 
 	}

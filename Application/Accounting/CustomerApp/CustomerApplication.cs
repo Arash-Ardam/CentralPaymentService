@@ -1,4 +1,5 @@
-﻿using Application.Accounting.CustomerApp.Dtos;
+﻿using Application.Abstractions;
+using Application.Accounting.CustomerApp.Dtos;
 using Application.Accounting.CustomerApp.Events;
 using Domain.Customer;
 using Domain.Customer.Factories;
@@ -20,64 +21,94 @@ namespace Application.Accounting.CustomerApp
 			_mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
 		}
 
-		public async Task<Guid> CreateAsync(CreateCustomerDto createCustomerDto)
+		public async Task<ApplicationResponse<Guid>> CreateAsync(CreateCustomerDto createCustomerDto)
 		{
-			bool isExists = await _customerService.isCustomerExists(createCustomerDto.TenantName);
+			var response = new ApplicationResponse<Guid>() { IsSuccess = true };
+			try
+			{
+				bool isExists = await _customerService.isCustomerExists(createCustomerDto.TenantName);
 
-			if (isExists)
-				throw new ArgumentException($"Customer with tenantName: {createCustomerDto.TenantName} already exists");
+				if (isExists)
+					throw new ArgumentException($"Customer with tenantName: {createCustomerDto.TenantName} already exists");
 
-			Customer customer = new Customer(createCustomerDto.TenantName);
-			Guid createdCustomerId = await _customerRepository.AddAsync(customer);
+				Customer customer = new Customer(createCustomerDto.TenantName);
+				Guid createdCustomerId = await _customerRepository.AddAsync(customer);
 
-			return createdCustomerId;
+				response.Data = createdCustomerId;
+				response.Message = "Customer created successfully";
+				return response;
+			}
+			catch (Exception ex)
+			{
+				response.IsSuccess = false;
+				response.Message = ex.Message;
+				return response;
+			}
 		}
 
-		public async Task<Guid> SetCustomerSettings(InformationDto informationDto)
+		public async Task<ApplicationResponse<Guid>> SetCustomerSettings(InformationDto informationDto)
 		{
-			Customer? targetCustomer = await _customerRepository.GetAsync(informationDto.CustomerId);
-			if (targetCustomer == null)
-				throw new ArgumentException("given target Customer is not excists");
+			var response = new ApplicationResponse<Guid>() { IsSuccess = true };
+			try
+			{
+				Customer targetCustomer = await _customerRepository.GetAsync(informationDto.CustomerId)
+					?? throw new ArgumentException("given target Customer is not excists");
 
-			CustomerInfoFactory infoFactory = CustomerFactory.GetInformationFactory();
+				CustomerInfoFactory infoFactory = CustomerFactory.GetInformationFactory();
 
-			if (!string.IsNullOrWhiteSpace(informationDto.FirstName))
-				infoFactory.WithFirstName(informationDto.FirstName);
+				if (!string.IsNullOrWhiteSpace(informationDto.FirstName))
+					infoFactory.WithFirstName(informationDto.FirstName);
 
-			if (!string.IsNullOrWhiteSpace(informationDto.LastName))
-				infoFactory.WithFirstName(informationDto.LastName);
+				if (!string.IsNullOrWhiteSpace(informationDto.LastName))
+					infoFactory.WithFirstName(informationDto.LastName);
 
-			if (!string.IsNullOrWhiteSpace(informationDto.NationalCode))
-				infoFactory.WithFirstName(informationDto.NationalCode);
+				if (!string.IsNullOrWhiteSpace(informationDto.NationalCode))
+					infoFactory.WithFirstName(informationDto.NationalCode);
 
-			var customerInfo = infoFactory.Build();
+				var customerInfo = infoFactory.Build();
 
-			targetCustomer.SetInformation(customerInfo);
+				targetCustomer.SetInformation(customerInfo);
 
-			await _customerRepository.EditAsync(targetCustomer);
+				await _customerRepository.EditAsync(targetCustomer);
 
-			return targetCustomer.Id;
+				response.Data = targetCustomer.Id;
+				response.Message = "Customer settings set successfully";
+				return response;
+			}
+			catch (Exception ex)
+			{
+				response.IsSuccess = false;
+				response.Message = ex.Message;
+				return response;
+			}
 		}
 
-		public async Task<Guid> ChangeStatus(Guid customerId,bool status)
+		public async Task<ApplicationResponse<Guid>> ChangeStatus(Guid customerId,bool status)
 		{
-			Customer? targetCustomer = await _customerRepository.GetAsync(customerId);
-			if (targetCustomer == null)
-				throw new ArgumentException("given target Customer is not excists");
+			var response = new ApplicationResponse<Guid>() { IsSuccess = true };
+			try
+			{
+				Customer targetCustomer = await _customerRepository.GetAsync(customerId)
+					?? throw new ArgumentException("given target Customer is not excists");
 
-			targetCustomer.ChangeStatus(status);
+				targetCustomer.ChangeStatus(status);
 
-			await _customerRepository.EditAsync(targetCustomer);
+				await _customerRepository.EditAsync(targetCustomer);
 
-			// raise changed related accounts status event
-			await _mediator.Publish(new CustomerStatusChangedEvent(customerId, status));
+				// raise changed related accounts status event
+				await _mediator.Publish(new CustomerStatusChangedEvent(customerId, status));
 
-			return targetCustomer.Id;
+				response.Data = targetCustomer.Id;
+				response.Message = "Customer status changed successfully";
+				return response;
+			}
+			catch (Exception ex)
+			{
+				response.IsSuccess = false;
+				response.Message = ex.Message;
+				return response;
+			}
 		}
-
-
-
-
 
 	}
 }

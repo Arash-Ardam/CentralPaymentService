@@ -1,7 +1,6 @@
-﻿using Application.OrderManagement.Dtos;
+﻿using Application.Abstractions;
 using Application.OrderManagement.Dtos.GroupedOrder;
 using Application.OrderManagement.Mappings;
-using Application.OrderManagement.Ports.GroupedPaymentServices.Dtos;
 using Application.OrderManagement.Services;
 using Domain.Banking.Account;
 using Domain.Banking.Bank;
@@ -152,7 +151,7 @@ internal class GroupedOrderApplication
 		{
 			response.IsSuccess = false;
 			response.Message = ex.Message;
-			return response; 
+			return response;
 		}
 	}
 
@@ -167,7 +166,7 @@ internal class GroupedOrderApplication
 			targetOrder.FinalizeGroupedOrder();
 
 			await _orderRepository.UpdateOrderAsync(targetOrder);
-			
+
 			response.Message = "Order finalized and ready to proccess";
 			return response;
 		}
@@ -176,10 +175,10 @@ internal class GroupedOrderApplication
 		{
 			response.IsSuccess = false;
 			response.Message = ex.Message;
-			return response; 
+			return response;
 		}
 	}
-		
+
 
 	//Send to bank
 	public async Task<ApplicationResponse> SendOrderAsync(Guid orderId)
