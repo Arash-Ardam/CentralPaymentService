@@ -1,0 +1,83 @@
+﻿using Application.Accounting.CustomerApp.Dtos;
+using Application.Accounting.CustomerApp.Events;
+using Domain.Customer;
+using Domain.Customer.Factories;
+using Domain.Customer.Services;
+using MediatR;
+
+namespace Application.Accounting.CustomerApp
+{
+	internal class CustomerApplication
+	{
+		public ICustomerRepository _customerRepository { get; }
+		public ICustomerService _customerService { get; }
+		public IMediator _mediator { get; }
+
+		public CustomerApplication(ICustomerRepository customerRepository, ICustomerService customerService,IMediator mediator)
+		{
+			_customerRepository = customerRepository ?? throw new ArgumentNullException(nameof(customerRepository));
+			_customerService = customerService ?? throw new ArgumentNullException(nameof(customerService));
+			_mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
+		}
+
+		public async Task<Guid> CreateAsync(CreateCustomerDto createCustomerDto)
+		{
+			bool isExists = await _customerService.isCustomerExists(createCustomerDto.TenantName);
+
+			if (isExists)
+				throw new ArgumentException($"Customer with tenantName: {createCustomerDto.TenantName} already exists");
+
+			Customer customer = new Customer(createCustomerDto.TenantName);
+			Guid createdCustomerId = await _customerRepository.AddAsync(customer);
+
+			return createdCustomerId;
+		}
+
+		public async Task<Guid> SetCustomerSettings(InformationDto informationDto)
+		{
+			Customer? targetCustomer = await _customerRepository.GetAsync(informationDto.CustomerId);
+			if (targetCustomer == null)
+				throw new ArgumentException("given target Customer is not excists");
+
+			CustomerInfoFactory infoFactory = CustomerFactory.GetInformationFactory();
+
+			if (!string.IsNullOrWhiteSpace(informationDto.FirstName))
+				infoFactory.WithFirstName(informationDto.FirstName);
+
+			if (!string.IsNullOrWhiteSpace(informationDto.LastName))
+				infoFactory.WithFirstName(informationDto.LastName);
+
+			if (!string.IsNullOrWhiteSpace(informationDto.NationalCode))
+				infoFactory.WithFirstName(informationDto.NationalCode);
+
+			var customerInfo = infoFactory.Build();
+
+			targetCustomer.SetInformation(customerInfo);
+
+			await _customerRepository.EditAsync(targetCustomer);
+
+			return targetCustomer.Id;
+		}
+
+		public async Task<Guid> ChangeStatus(Guid customerId,bool status)
+		{
+			Customer? targetCustomer = await _customerRepository.GetAsync(customerId);
+			if (targetCustomer == null)
+				throw new ArgumentException("given target Customer is not excists");
+
+			targetCustomer.ChangeStatus(status);
+
+			await _customerRepository.EditAsync(targetCustomer);
+
+			// raise changed related accounts status event
+			await _mediator.Publish(new CustomerStatusChangedEvent(customerId, status));
+
+			return targetCustomer.Id;
+		}
+
+
+
+
+
+	}
+}
