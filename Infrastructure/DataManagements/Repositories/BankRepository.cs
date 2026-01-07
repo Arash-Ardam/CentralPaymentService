@@ -1,5 +1,6 @@
 ﻿using Domain.Banking.Bank;
 using Infrastructure.DataManagements.Abstractions;
+using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.DataManagements.Repositories
 {
@@ -12,19 +13,27 @@ namespace Infrastructure.DataManagements.Repositories
 			_dbContext = dbContext;		
 		}
 
-		public Task<Bank> AddAsync(Bank bank)
+		public async Task<Bank> AddAsync(Bank bank)
 		{
-			throw new NotImplementedException();
+			await _dbContext.Banks.AddAsync(bank);
+			await _dbContext.SaveChangesAsync();
+
+			return bank;
 		}
 
-		public Task<Bank> EditAsync(Bank bank)
+		public async Task<Bank> EditAsync(Bank bank)
 		{
-			throw new NotImplementedException();
+			_dbContext.Banks.Update(bank);
+			await _dbContext.SaveChangesAsync();
+
+			return bank;
 		}
 
-		public Task<Bank> GetAsync(Guid bankId)
+		public async Task<Bank> GetAsync(Guid bankId)
 		{
-			throw new NotImplementedException();
+			return await _dbContext.Banks.FirstOrDefaultAsync(bank => bank.Id == bankId);
 		}
+
+		
 	}
 }

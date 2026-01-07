@@ -1,5 +1,7 @@
 ﻿using Domain.Banking.Account;
+using Domain.Banking.Bank;
 using Infrastructure.DataManagements.Abstractions;
+using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.DataManagements.Repositories
 {
@@ -14,7 +16,10 @@ namespace Infrastructure.DataManagements.Repositories
 
 		public Task<Guid> AddAsync(Account account)
 		{
-			throw new NotImplementedException();
+			_dbContext.Accounts.AddAsync(account);
+			_dbContext.SaveChangesAsync();
+
+			return Task.FromResult(account.Id);
 		}
 
 		public Task<Guid> DeleteAsync(Guid accountId)
@@ -22,9 +27,12 @@ namespace Infrastructure.DataManagements.Repositories
 			throw new NotImplementedException();
 		}
 
-		public Task<Guid> EditAsync(Account account)
+		public async Task<Guid> EditAsync(Account account)
 		{
-			throw new NotImplementedException();
+			_dbContext.Accounts.Update(account);
+			await _dbContext.SaveChangesAsync();
+
+			return account.Id;
 		}
 
 		public Task EditRangeAsync(List<Account> accounts)
@@ -32,19 +40,19 @@ namespace Infrastructure.DataManagements.Repositories
 			throw new NotImplementedException();
 		}
 
-		public Task<Account> GetAsync(Guid accountId)
+		public async Task<Account> GetAsync(Guid accountId)
 		{
-			throw new NotImplementedException();
+			return await _dbContext.Accounts.FirstOrDefaultAsync(acc => acc.Id == accountId);
 		}
 
-		public Task<List<Account>> GetByBankId(Guid bankId)
+		public async Task<List<Account>> GetByBankId(Guid bankId)
 		{
-			throw new NotImplementedException();
+			return await _dbContext.Accounts.Where(acc => acc.BankId == bankId).ToListAsync();
 		}
 
-		public Task<List<Account>> GetByCustomerId(Guid customerId)
+		public async Task<List<Account>> GetByCustomerId(Guid customerId)
 		{
-			throw new NotImplementedException();
+			return await _dbContext.Accounts.Where(acc => acc.CustomerId == customerId).ToListAsync();
 		}
 	}
 }

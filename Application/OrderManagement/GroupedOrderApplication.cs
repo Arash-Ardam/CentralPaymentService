@@ -95,7 +95,7 @@ internal class GroupedOrderApplication
 
 			targetOrder.AddGroupedTransactions(transactions);
 
-			await _orderRepository.UpdateOrderAsync(targetOrder);
+			await _orderRepository.UpdateAsync(targetOrder);
 
 			response.Message = "Transactions added successfully";
 			return response;
@@ -119,7 +119,7 @@ internal class GroupedOrderApplication
 
 			targetOrder.RemoveGroupedTransaction(transactionId);
 
-			await _orderRepository.UpdateOrderAsync(targetOrder);
+			await _orderRepository.UpdateAsync(targetOrder);
 
 			response.Message = "Transaction removed successfully";
 			return response;
@@ -142,7 +142,7 @@ internal class GroupedOrderApplication
 
 			targetOrder.RemoveGroupedRangeTransactions(transactionIds);
 
-			await _orderRepository.UpdateOrderAsync(targetOrder);
+			await _orderRepository.UpdateAsync(targetOrder);
 
 			response.Message = "Transactions removed successfully";
 			return response;
@@ -165,7 +165,7 @@ internal class GroupedOrderApplication
 
 			targetOrder.FinalizeGroupedOrder();
 
-			await _orderRepository.UpdateOrderAsync(targetOrder);
+			await _orderRepository.UpdateAsync(targetOrder);
 
 			response.Message = "Order finalized and ready to proccess";
 			return response;
@@ -215,7 +215,7 @@ internal class GroupedOrderApplication
 
 			}
 
-			await _orderRepository.UpdateOrderAsync(order);
+			await _orderRepository.UpdateAsync(order);
 
 			applicationResponse.StatusCode = response.StatusCode;
 			applicationResponse.Message = response.Message;
@@ -263,7 +263,7 @@ internal class GroupedOrderApplication
 					}
 				}
 
-				await _orderRepository.UpdateOrderAsync(order);
+				await _orderRepository.UpdateAsync(order);
 			}
 
 			applicationResponse.StatusCode = response.StatusCode;
@@ -307,7 +307,7 @@ internal class GroupedOrderApplication
 									response.Data.TrackingCode,
 									response.Data.ProviderMessage);
 
-				await _orderRepository.UpdateOrderAsync(order);
+				await _orderRepository.UpdateAsync(order);
 			}
 
 			applicationResponse.StatusCode = response.StatusCode;

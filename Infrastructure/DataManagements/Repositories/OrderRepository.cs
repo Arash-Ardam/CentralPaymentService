@@ -1,5 +1,6 @@
 ﻿using Domain.Order;
 using Infrastructure.DataManagements.Abstractions;
+using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.DataManagements.Repositories
 {
@@ -12,9 +13,12 @@ namespace Infrastructure.DataManagements.Repositories
 			_dbContext = dbContext;
 		}
 
-		public Task<Order> CreateAsync(Order order)
+		public async Task<Order> CreateAsync(Order order)
 		{
-			throw new NotImplementedException();
+			await _dbContext.Orders.AddAsync(order);
+			await _dbContext.SaveChangesAsync();
+
+			return order;
 		}
 
 		public Task DeleteOrderAsync(string orderId)
@@ -27,19 +31,26 @@ namespace Infrastructure.DataManagements.Repositories
 			throw new NotImplementedException();
 		}
 
-		public Task<Order?> GetAsync(Guid id)
+		public async Task<Order?> GetAsync(Guid id)
 		{
-			throw new NotImplementedException();
+			return await _dbContext.Orders
+				.Include(ord =>  ord.SingleTransaction)
+				.Include(ord => ord.GroupedTransactions)
+				.FirstOrDefaultAsync(ord => ord.Id == id);
 		}
 
-		public Task<Order?> GetByOrderIdsync(string orderId)
+		public async Task<Order?> GetByOrderIdsync(string orderId)
 		{
-			throw new NotImplementedException();
+			return await _dbContext.Orders
+				.Include(ord => ord.SingleTransaction)
+				.Include(ord => ord.GroupedTransactions)
+				.FirstOrDefaultAsync(ord => ord.OrderId == orderId);
 		}
 
-		public Task UpdateOrderAsync(Order order)
+		public async Task UpdateAsync(Order order)
 		{
-			throw new NotImplementedException();
+			_dbContext.Update(order);
+			await _dbContext.SaveChangesAsync();
 		}
 	}
 }

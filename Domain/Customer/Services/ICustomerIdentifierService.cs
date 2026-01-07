@@ -1,6 +1,6 @@
 ﻿namespace Domain.Customer.Services
 {
-	public interface ICustomerService
+	public interface ICustomerIdentifierService
 	{
 		Task<bool> isCustomerExists(string tenantName);
 

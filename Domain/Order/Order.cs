@@ -1,7 +1,6 @@
 ﻿using Domain.Order.Entities;
 using Domain.Order.Enums;
 using Domain.Order.ValueObjects;
-using System.Runtime.CompilerServices;
 namespace Domain.Order;
 
 public class Order
@@ -17,7 +16,7 @@ public class Order
 	public string ProviderMessage { get; private set; } = string.Empty;
 	public OrderSpecs? Specifics { get; private set; }
 	public Guid SourceAccountId { get; private set; }
-	public SingleTransaction? SingleTransaction { get; private set; }
+	public SingleTransaction? SingleTransaction { get; private set; } 
 	public List<GroupedTransaction> GroupedTransactions { get; private set; } = new List<GroupedTransaction>();
 
 	public void SetSingleOrderSpecs(long totalAmount, string description)

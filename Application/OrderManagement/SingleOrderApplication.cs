@@ -84,7 +84,7 @@ namespace Application.OrderManagement
 
 				targerOrder.AddSingleTransaction(transaction);
 
-				await _orderRepository.UpdateOrderAsync(targerOrder);
+				await _orderRepository.UpdateAsync(targerOrder);
 
 				response.Data = targerOrder.Id;
 				response.Message = "transaction added successfully";
@@ -110,7 +110,7 @@ namespace Application.OrderManagement
 
 				targerOrder.RemoveSingleTransaction();
 
-				await _orderRepository.UpdateOrderAsync(targerOrder);
+				await _orderRepository.UpdateAsync(targerOrder);
 
 				response.Message = "transaction removed successfully";
 				return response;
@@ -133,7 +133,7 @@ namespace Application.OrderManagement
 
 				targerOrder.FinalizeSingleOrder();
 
-				await _orderRepository.UpdateOrderAsync(targerOrder);
+				await _orderRepository.UpdateAsync(targerOrder);
 
 				response.Message = "order finalized and ready to proccess";
 				return response;
@@ -169,7 +169,7 @@ namespace Application.OrderManagement
 				else
 					order.MarkSingleRequestStatus(providerResponse.Data.Status, providerResponse.Message);
 
-				await _orderRepository.UpdateOrderAsync(order);
+				await _orderRepository.UpdateAsync(order);
 
 				applicationResponse.IsSuccess = providerResponse.IsSuccess;
 				applicationResponse.Message = providerResponse.Message;
@@ -204,7 +204,7 @@ namespace Application.OrderManagement
 				if (response.IsSuccess)
 				{
 					order.MarkSingleRequestStatus(response.Data.Status, response.Message);
-					await _orderRepository.UpdateOrderAsync(order);
+					await _orderRepository.UpdateAsync(order);
 				}
 
 				applicationResponse.IsSuccess = response.IsSuccess;

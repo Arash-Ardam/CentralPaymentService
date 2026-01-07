@@ -1,5 +1,6 @@
 ﻿using Domain.Banking.Account;
 using Domain.Banking.Bank;
+using Domain.Customer;
 using Domain.Order;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,6 +14,7 @@ namespace Infrastructure.DataManagements.Abstractions
 
 		public DbSet<Bank> Banks => Set<Bank>();
 		public DbSet<Account> Accounts => Set<Account>();
+		public DbSet<Customer> Customers => Set<Customer>();
 		public DbSet<Order> Orders => Set<Order>();
 
 		protected override void OnModelCreating(ModelBuilder modelBuilder)

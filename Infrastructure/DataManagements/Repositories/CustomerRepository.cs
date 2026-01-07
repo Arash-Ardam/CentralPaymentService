@@ -1,5 +1,6 @@
 ﻿using Domain.Customer;
 using Infrastructure.DataManagements.Abstractions;
+using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.DataManagements.Repositories
 {
@@ -11,9 +12,12 @@ namespace Infrastructure.DataManagements.Repositories
 		{
 			_dbContext = dbContext;	
 		}
-		public Task<Guid> AddAsync(Customer customer)
+		public async Task<Guid> AddAsync(Customer customer)
 		{
-			throw new NotImplementedException();
+			await _dbContext.Customers.AddAsync(customer);
+			await _dbContext.SaveChangesAsync();
+
+			return customer.Id;
 		}
 
 		public Task DeleteAsync(Guid Id)
@@ -21,14 +25,15 @@ namespace Infrastructure.DataManagements.Repositories
 			throw new NotImplementedException();
 		}
 
-		public Task EditAsync(Customer customer)
+		public async Task EditAsync(Customer customer)
 		{
-			throw new NotImplementedException();
+			_dbContext.Customers.Update(customer);
+			await _dbContext.SaveChangesAsync();
 		}
 
-		public Task<Customer> GetAsync(Guid id)
+		public async Task<Customer> GetAsync(Guid id)
 		{
-			throw new NotImplementedException();
+			return await _dbContext.Customers.FirstOrDefaultAsync(customer => customer.Id == id);
 		}
 	}
 }

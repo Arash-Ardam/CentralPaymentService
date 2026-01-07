@@ -11,13 +11,13 @@ namespace Application.Accounting.CustomerApp
 	internal class CustomerApplication
 	{
 		public ICustomerRepository _customerRepository { get; }
-		public ICustomerService _customerService { get; }
+		public ICustomerIdentifierService _customerIdentifierService { get; }
 		public IMediator _mediator { get; }
 
-		public CustomerApplication(ICustomerRepository customerRepository, ICustomerService customerService,IMediator mediator)
+		public CustomerApplication(ICustomerRepository customerRepository, ICustomerIdentifierService customerService,IMediator mediator)
 		{
 			_customerRepository = customerRepository ?? throw new ArgumentNullException(nameof(customerRepository));
-			_customerService = customerService ?? throw new ArgumentNullException(nameof(customerService));
+			_customerIdentifierService = customerService ?? throw new ArgumentNullException(nameof(customerService));
 			_mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
 		}
 
@@ -26,7 +26,7 @@ namespace Application.Accounting.CustomerApp
 			var response = new ApplicationResponse<Guid>() { IsSuccess = true };
 			try
 			{
-				bool isExists = await _customerService.isCustomerExists(createCustomerDto.TenantName);
+				bool isExists = await _customerIdentifierService.isCustomerExists(createCustomerDto.TenantName);
 
 				if (isExists)
 					throw new ArgumentException($"Customer with tenantName: {createCustomerDto.TenantName} already exists");
