@@ -1,0 +1,6 @@
+@CentralPaymentWebApi_HostAddress = http://localhost:5003
+
+GET {{CentralPaymentWebApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

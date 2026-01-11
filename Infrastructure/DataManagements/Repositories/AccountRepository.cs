@@ -1,5 +1,4 @@
 ﻿using Domain.Banking.Account;
-using Domain.Banking.Bank;
 using Infrastructure.DataManagements.Abstractions;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,12 +13,12 @@ namespace Infrastructure.DataManagements.Repositories
 			_dbContext = dbContext;		
 		}
 
-		public Task<Guid> AddAsync(Account account)
+		public async Task<Guid> AddAsync(Account account)
 		{
-			_dbContext.Accounts.AddAsync(account);
-			_dbContext.SaveChangesAsync();
+			await _dbContext.Accounts.AddAsync(account);
+			await _dbContext.SaveChangesAsync();
 
-			return Task.FromResult(account.Id);
+			return account.Id;
 		}
 
 		public Task<Guid> DeleteAsync(Guid accountId)

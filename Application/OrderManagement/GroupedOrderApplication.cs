@@ -41,7 +41,7 @@ internal class GroupedOrderApplication
 		try
 		{
 			var targetAccount = await _accountRepository.GetAsync(orderDto.AccountId)
-			?? throw new ArgumentException("target account not found");
+				?? throw new ArgumentException("target account not found");
 
 			var bank = await _bankRepository.GetAsync(targetAccount.BankId)
 				?? throw new ArgumentException("Invalid bank");

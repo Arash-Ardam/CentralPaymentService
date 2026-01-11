@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/Presentations/">
+    <Project Path="CentralPaymentWebApi/CentralPaymentWebApi.csproj" Id="68e52928-8319-4d59-a679-aad39bf7eae8" />
+  </Folder>
   <Project Path="Application/Application.csproj" />
   <Project Path="Domain/Domain.csproj" />
   <Project Path="Infrastructure/Infrastructure.csproj" Id="e7c5292c-a905-436c-b960-0644b24a8878" />

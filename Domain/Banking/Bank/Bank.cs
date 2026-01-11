@@ -25,10 +25,9 @@ public class Bank
 			ServiceTypes.Add(service);
 	}
 
-	public void RemoveService(ServiceTypes service)
+	public void RemoveServices()
 	{
-		if (ServiceTypes.Contains(service) && service != Enums.ServiceTypes.None)
-			ServiceTypes.Remove(service);
+		ServiceTypes.RemoveAll(x => x != Enums.ServiceTypes.None);
 	}
 
 	public void ChangeStatus(bool status) => isEnable = status;
