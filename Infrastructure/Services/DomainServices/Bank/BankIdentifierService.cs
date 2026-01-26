@@ -8,12 +8,12 @@ namespace Infrastructure.Services.DomainServices.Bank
 {
 	internal class BankIdentifierService : IBankIdentifierService
 	{
-		public BankIdentifierService(EfCoreDbContext dbContext)
+		public BankIdentifierService(AdminEfCoreDbContext dbContext)
 		{
 			_dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
 		}
 
-		public EfCoreDbContext _dbContext { get; }
+		public AdminEfCoreDbContext _dbContext { get; }
 
 		public Task<bool> IsBankExists(string name, BankCode bankCode)
 		{

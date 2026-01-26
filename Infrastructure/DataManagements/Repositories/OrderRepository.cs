@@ -1,16 +1,21 @@
 ﻿using Domain.Order;
 using Infrastructure.DataManagements.Abstractions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Infrastructure.DataManagements.Repositories
 {
 	internal class OrderRepository : IOrderRepository
 	{
-		private readonly EfCoreDbContext _dbContext;
+		private readonly TenantEfCoreDbContext _dbContext;
+		private readonly ORMToolsOptions _ormOptions;
 
-		public OrderRepository(EfCoreDbContext dbContext)
+		public OrderRepository(TenantEfCoreDbContext dbContext,IOptions<ORMToolsOptions> ormOptions)
 		{
-			_dbContext = dbContext;
+			_dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+			_ormOptions = ormOptions.Value ?? throw new ArgumentNullException(nameof(ormOptions));
+
+			_dbContext.Database.SetConnectionString(string.Format(_ormOptions.EfCore.TenantConnectionString, "Tenant")); // should be compeleted
 		}
 
 		public async Task<Order> CreateAsync(Order order)

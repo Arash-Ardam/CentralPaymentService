@@ -6,9 +6,9 @@ namespace Infrastructure.DataManagements.Repositories
 {
 	internal class BankRepository : IBankRepository
 	{
-		private readonly EfCoreDbContext _dbContext;
+		private readonly AdminEfCoreDbContext _dbContext;
 
-		public BankRepository(EfCoreDbContext dbContext)
+		public BankRepository(AdminEfCoreDbContext dbContext)
 		{
 			_dbContext = dbContext;		
 		}

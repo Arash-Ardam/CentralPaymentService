@@ -6,12 +6,12 @@ namespace Infrastructure.Services.DomainServices.Customer
 {
 	internal class CustomerIdentifierService : ICustomerIdentifierService
 	{
-		public CustomerIdentifierService(EfCoreDbContext dbContext)
+		public CustomerIdentifierService(AdminEfCoreDbContext dbContext)
 		{
 			_dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
 		}
 
-		public EfCoreDbContext _dbContext { get; }
+		public AdminEfCoreDbContext _dbContext { get; }
 
 		public Task<bool> isCustomerExists(string tenantName)
 		{

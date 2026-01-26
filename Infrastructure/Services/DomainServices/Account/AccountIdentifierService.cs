@@ -6,12 +6,12 @@ namespace Infrastructure.Services.DomainServices.Account
 {
 	internal class AccountIdentifierService : IAccountIdentifierService
 	{
-		public AccountIdentifierService(EfCoreDbContext dbContext)
+		public AccountIdentifierService(AdminEfCoreDbContext dbContext)
 		{
 			_dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
 		}
 
-		public EfCoreDbContext _dbContext { get; }
+		public AdminEfCoreDbContext _dbContext { get; }
 
 		public Task<bool> IsExists(string accountNubmer, string accountIban)
 		{

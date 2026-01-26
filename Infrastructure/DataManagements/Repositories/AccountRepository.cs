@@ -6,9 +6,9 @@ namespace Infrastructure.DataManagements.Repositories
 {
 	internal class AccountRepository : IAccountRepository
 	{
-		private readonly EfCoreDbContext _dbContext;
+		private readonly AdminEfCoreDbContext _dbContext;
 
-		public AccountRepository(EfCoreDbContext dbContext)
+		public AccountRepository(AdminEfCoreDbContext dbContext)
 		{
 			_dbContext = dbContext;		
 		}
