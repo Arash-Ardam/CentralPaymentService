@@ -1,5 +1,4 @@
-﻿using Application.Abstractions;
-using Application.Accounting.BankApp;
+﻿using Application.Accounting.BankApp;
 using Application.Accounting.BankApp.Dtos;
 using CentralPaymentWebApi.Abstractions;
 using Domain.Banking.Bank.Enums;
@@ -21,7 +20,7 @@ namespace CentralPaymentWebApi.Controllers.Accounting
 		[HttpPost(RouteTemplates.Create)]
 		public async Task<IActionResult> CreateAsync([FromBody] CreateBankDto createDto)
 		{
-			if(createDto.BankCode == null)
+			if (createDto.BankCode == null)
 				return BadRequest("BankCode is null");
 
 			var appResponse = await _bankApplication.CreateAsync(createDto);
@@ -33,14 +32,14 @@ namespace CentralPaymentWebApi.Controllers.Accounting
 		}
 
 		[HttpPost("AssignServices")]
-		public async Task<IActionResult> AssignServicesAsync([FromRoute]Guid bankId,[FromBody]List<ServiceTypes> serviceTypes)
+		public async Task<IActionResult> AssignServicesAsync([FromRoute] Guid bankId, [FromBody] List<ServiceTypes> serviceTypes)
 		{
 			if (serviceTypes.Contains(ServiceTypes.None))
 				return BadRequest("Invalid service types");
 
 			var appResponse = await _bankApplication.AssignPaymentServices(bankId, serviceTypes);
 
-			if(appResponse.IsFailed)
+			if (appResponse.IsFailed)
 				return BadRequest(appResponse.Message);
 
 			return Accepted(appResponse.Message);

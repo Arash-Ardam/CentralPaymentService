@@ -23,6 +23,9 @@ public class Account
 		ExpirationDate = expireDate;
 	}
 
+	// for ORM bindings
+	private Account() { }
+
 	public void AssignToCustomer(Guid id) => CustomerId = id;
 	public void AssignToBank(Guid id) => BankId = id;
 	public void ChangeStatus(bool status) => IsEnable = status;

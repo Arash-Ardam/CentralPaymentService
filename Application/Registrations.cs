@@ -7,6 +7,9 @@ namespace Application
 	{
 		public static void AddApplications(this IServiceCollection services)
 		{
+			// Register Tools
+			services.AddMediatR(configuration => configuration.RegisterServicesFromAssembly(typeof(Registrations).Assembly));
+
 			// Register applications
 			services.AddScoped<IBankApplication, BankApplication>();
 		}

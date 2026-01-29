@@ -28,7 +28,7 @@ namespace Application.Accounting.BankApp
 			{
 				bool isExist = await _bankIdentifierService.IsBankExists(bankDto.Name, bankDto.BankCode);
 
-				if (!isExist)
+				if (isExist)
 					throw new ArgumentException($"The given Bank with name:{bankDto.Name} and code:{bankDto.BankCode} already excists");
 
 				Bank newBank = new Bank(bankDto.Name, bankDto.BankCode);

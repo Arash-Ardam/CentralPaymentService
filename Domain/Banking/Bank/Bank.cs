@@ -11,7 +11,7 @@ public class Bank
 	public string Name { get; private set; } = string.Empty;
 	public bool isEnable { get; private set; } = true;
 
-	public List<ServiceTypes> ServiceTypes { get; set; }
+	public List<ServiceTypes> ServiceTypes { get; set; } = new();
 
 	public Bank(string name, BankCode code)
 	{

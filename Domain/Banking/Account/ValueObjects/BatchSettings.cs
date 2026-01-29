@@ -10,10 +10,10 @@
 		public DateTimeOffset ContractExpire {  get; private set; }
 
 
-		internal BatchSettings(bool isEnable, int maxTransactionCount,long maxDailyAmount, long minSatnaAmount, DateTimeOffset contractExpire)
+		internal BatchSettings(bool isEnable, int maxTransactionsCount,long maxDailyAmount, long minSatnaAmount, DateTimeOffset contractExpire)
 		{
 			IsEnable = isEnable;
-			MaxTransactionsCount = maxTransactionCount;
+			MaxTransactionsCount = maxTransactionsCount;
 			MaxDailyAmount = maxDailyAmount;
 			ContractExpire = contractExpire;
 			MinSatnaAmount = minSatnaAmount;

@@ -1,5 +1,7 @@
 using Application;
 using Infrastructure.DataManagements;
+using Infrastructure.Services;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +12,7 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
 builder.Services.AddDataManagements(builder.Configuration);
+builder.Services.AddInfraServices(builder.Configuration);
 builder.Services.AddApplications();
 
 var app = builder.Build();
@@ -18,6 +21,7 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
 	app.MapOpenApi();
+	app.MapScalarApiReference();
 }
 
 app.UseHttpsRedirection();
