@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 
 namespace Application.Accounting.AccountApp
 {
-	internal class AccountApplication
+	internal class AccountApplication : IAccountApplication
 	{
 		public IAccountRepository _accountRepository { get; }
 		public ICustomerRepository _customerRepository { get; }

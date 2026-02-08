@@ -1,11 +1,13 @@
-﻿namespace Application.Abstractions
+﻿using System.Net;
+
+namespace Application.Abstractions
 {
 	public class ApplicationResponse<T>
 	{
 		public T? Data { get; set; }
 		public bool IsSuccess { get; set; }
+		public ApplicarionResultStatus Status { get; set; }
 		public bool IsFailed => !IsSuccess;
-		public short StatusCode { get; set; }
 		public string Message { get; set; } = string.Empty;
 	}
 
@@ -13,7 +15,7 @@
 	{
 		public bool IsSuccess { get; set; }
 		public bool IsFailed => !IsSuccess;
-		public short StatusCode { get; set; }
+		public ApplicarionResultStatus Status { get; set; }
 		public string Message { get; set; } = string.Empty;
 	}
 }

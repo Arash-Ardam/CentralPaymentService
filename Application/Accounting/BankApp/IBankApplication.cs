@@ -9,5 +9,8 @@ namespace Application.Accounting.BankApp
 		Task<ApplicationResponse<Guid>> CreateAsync(CreateBankDto bankDto);
 		Task<ApplicationResponse> AssignPaymentServices(Guid bankId, List<ServiceTypes> services);
 		Task<ApplicationResponse> ChangeStatusAsync(Guid bankId, bool status);
+
+		Task<ApplicationResponse<BankInfoDto>> GetAsync(Guid bankId);
+		
 	}
 }

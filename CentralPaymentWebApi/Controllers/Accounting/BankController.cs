@@ -1,14 +1,15 @@
 ﻿using Application.Accounting.BankApp;
 using Application.Accounting.BankApp.Dtos;
 using CentralPaymentWebApi.Abstractions;
+using CentralPaymentWebApi.Dtos.BankApi;
+using Domain.Banking.Bank;
 using Domain.Banking.Bank.Enums;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CentralPaymentWebApi.Controllers.Accounting
 {
-	[Route("[controller]")]
-	[ApiController]
-	public class BankController : ControllerBase
+	public class BankController : ApiControllerBase
 	{
 		public BankController(IBankApplication bankApplication)
 		{
@@ -18,47 +19,53 @@ namespace CentralPaymentWebApi.Controllers.Accounting
 		public IBankApplication _bankApplication { get; }
 
 		[HttpPost(RouteTemplates.Create)]
+		[ProducesResponseType(statusCode: StatusCodes.Status201Created)]
+		[ProducesResponseType(statusCode: StatusCodes.Status400BadRequest)]
 		public async Task<IActionResult> CreateAsync([FromBody] CreateBankDto createDto)
 		{
 			if (createDto.BankCode == null)
 				return BadRequest("BankCode is null");
 
 			var appResponse = await _bankApplication.CreateAsync(createDto);
+			ActionResult = HandleOutput(appResponse);
 
-			if (appResponse.IsFailed)
-				return BadRequest(appResponse.Message);
+			return ActionResult;
+		}
 
-			return Created(string.Empty, $"Bank with id: {appResponse.Data} created");
+		[HttpGet(RouteTemplates.Get)]
+		[ProducesResponseType(statusCode: StatusCodes.Status200OK,Type =typeof(BankInfoDto))]
+		[ProducesResponseType(statusCode: StatusCodes.Status400BadRequest)]
+		public async Task<IActionResult> GetAsync([FromQuery] Guid bankId)
+		{
+			var appResponse = await _bankApplication.GetAsync(bankId);
+			ActionResult = HandleOutput(appResponse);
+
+			return ActionResult;
 		}
 
 		[HttpPost("AssignServices")]
-		public async Task<IActionResult> AssignServicesAsync([FromRoute] Guid bankId, [FromBody] List<ServiceTypes> serviceTypes)
+		[ProducesResponseType(statusCode: StatusCodes.Status202Accepted)]
+		[ProducesResponseType(statusCode: StatusCodes.Status400BadRequest)]
+		public async Task<IActionResult> AssignServicesAsync([FromBody] AssignServiceDto assignServiceDto)
 		{
-			if (serviceTypes.Contains(ServiceTypes.None))
+			if (assignServiceDto.ServiceTypes.Contains(ServiceTypes.None))
 				return BadRequest("Invalid service types");
 
-			var appResponse = await _bankApplication.AssignPaymentServices(bankId, serviceTypes);
+			var appResponse = await _bankApplication.AssignPaymentServices(assignServiceDto.BankId, assignServiceDto.ServiceTypes);
+			ActionResult = HandleOutput(appResponse);
 
-			if (appResponse.IsFailed)
-				return BadRequest(appResponse.Message);
-
-			return Accepted(appResponse.Message);
+			return ActionResult;
 		}
 
-
 		[HttpPost("ChangeStatus")]
+		[ProducesResponseType(statusCode: StatusCodes.Status202Accepted)]
+		[ProducesResponseType(statusCode: StatusCodes.Status400BadRequest)]
 		public async Task<IActionResult> ChangeStatusAsync([FromRoute] Guid bankId, [FromRoute] bool status)
 		{
 			var appResponse = await _bankApplication.ChangeStatusAsync(bankId, status);
+			ActionResult = HandleOutput(appResponse);
 
-			if (appResponse.IsFailed)
-				return BadRequest(appResponse.Message);
-
-			return Accepted(appResponse.Message);
+			return ActionResult;
 		}
-
-
-
-
 	}
 }

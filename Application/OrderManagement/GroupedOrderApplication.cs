@@ -217,7 +217,6 @@ internal class GroupedOrderApplication
 
 			await _orderRepository.UpdateAsync(order);
 
-			applicationResponse.StatusCode = response.StatusCode;
 			applicationResponse.Message = response.Message;
 			applicationResponse.IsSuccess = response.IsSuccess;
 			return applicationResponse;
@@ -266,7 +265,6 @@ internal class GroupedOrderApplication
 				await _orderRepository.UpdateAsync(order);
 			}
 
-			applicationResponse.StatusCode = response.StatusCode;
 			applicationResponse.Message = response.Message;
 			applicationResponse.IsSuccess = response.IsSuccess;
 			return applicationResponse;
@@ -310,7 +308,6 @@ internal class GroupedOrderApplication
 				await _orderRepository.UpdateAsync(order);
 			}
 
-			applicationResponse.StatusCode = response.StatusCode;
 			applicationResponse.Message = response.Message;
 			applicationResponse.IsSuccess = response.IsSuccess;
 			return applicationResponse;

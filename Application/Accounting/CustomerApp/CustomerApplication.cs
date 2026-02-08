@@ -1,24 +1,28 @@
 ﻿using Application.Abstractions;
 using Application.Accounting.CustomerApp.Dtos;
 using Application.Accounting.CustomerApp.Events;
+using AutoMapper;
 using Domain.Customer;
 using Domain.Customer.Factories;
 using Domain.Customer.Services;
 using MediatR;
+using System.Net.NetworkInformation;
 
 namespace Application.Accounting.CustomerApp
 {
-	internal class CustomerApplication
+	internal class CustomerApplication : ICustomerApplication
 	{
-		public ICustomerRepository _customerRepository { get; }
-		public ICustomerIdentifierService _customerIdentifierService { get; }
-		public IMediator _mediator { get; }
+		private readonly ICustomerRepository _customerRepository;
+		private readonly ICustomerIdentifierService _customerIdentifierService;
+		private readonly IMediator _mediator;
+		private readonly IMapper _mapper;
 
-		public CustomerApplication(ICustomerRepository customerRepository, ICustomerIdentifierService customerService,IMediator mediator)
+		public CustomerApplication(ICustomerRepository customerRepository, ICustomerIdentifierService customerService, IMediator mediator, IMapper mapper)
 		{
 			_customerRepository = customerRepository ?? throw new ArgumentNullException(nameof(customerRepository));
 			_customerIdentifierService = customerService ?? throw new ArgumentNullException(nameof(customerService));
 			_mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
+			_mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
 		}
 
 		public async Task<ApplicationResponse<Guid>> CreateAsync(CreateCustomerDto createCustomerDto)
@@ -110,5 +114,23 @@ namespace Application.Accounting.CustomerApp
 			}
 		}
 
+		public async Task<ApplicationResponse<CustomerInfoDto>> GetAsync(Guid customerId)
+		{
+			var response = new ApplicationResponse<CustomerInfoDto>() { IsSuccess = true };
+			try
+			{
+				Customer customer = await _customerRepository.GetAsync(customerId) 
+					?? throw new ArgumentException("Customer with given id not found");
+
+				response.Data = _mapper.Map<CustomerInfoDto>(customer);
+				return response;
+			}
+			catch (Exception ex)
+			{
+				response.IsSuccess = false;
+				response.Message = ex.Message;
+				return response;
+			}
+		}
 	}
 }

@@ -15,10 +15,11 @@ namespace Application.Accounting.CustomerApp.Events
 		public async Task Handle(CustomerStatusChangedEvent notification, CancellationToken cancellationToken)
 		{
 			var accounts = await _accountRepository.GetByCustomerId(notification.CustomerId);
-
-			accounts.ForEach(acc => acc.ChangeStatus(notification.Status));
-
-			await _accountRepository.EditRangeAsync(accounts);
+			if (accounts != null)
+			{
+				accounts.ForEach(acc => acc.ChangeStatus(notification.Status));
+				await _accountRepository.EditRangeAsync(accounts);
+			}
 		}
 	}
 }

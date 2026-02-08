@@ -173,7 +173,6 @@ namespace Application.OrderManagement
 
 				applicationResponse.IsSuccess = providerResponse.IsSuccess;
 				applicationResponse.Message = providerResponse.Message;
-				applicationResponse.StatusCode = providerResponse.StatusCode;
 
 				return applicationResponse;
 			}
@@ -209,7 +208,6 @@ namespace Application.OrderManagement
 
 				applicationResponse.IsSuccess = response.IsSuccess;
 				applicationResponse.Message = response.Message;
-				applicationResponse.StatusCode = response.StatusCode;
 
 				return applicationResponse;
 			}
