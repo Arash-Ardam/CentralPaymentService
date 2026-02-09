@@ -31,6 +31,11 @@ namespace Infrastructure.DataManagements.Repositories
 			await _dbContext.SaveChangesAsync();
 		}
 
+		public Task<List<Customer>> GetAllAsync()
+		{
+			return _dbContext.Customers.AsNoTracking().ToListAsync();
+		}
+
 		public async Task<Customer> GetAsync(Guid id)
 		{
 			return await _dbContext.Customers.FirstOrDefaultAsync(customer => customer.Id == id);

@@ -15,7 +15,7 @@ namespace CentralPaymentWebApi.Abstractions
 			{
 				ApplicarionResultStatus.Done => Ok(response.Data),
 				ApplicarionResultStatus.Created => Created(string.Empty,response.Message),
-				ApplicarionResultStatus.Accepted => Accepted(response.Message),
+				ApplicarionResultStatus.Accepted => Accepted(string.Empty,response.Message),
 				ApplicarionResultStatus.NotFound => NotFound(response.Message),
 				ApplicarionResultStatus.ValidationError => BadRequest(response.Message),
 				ApplicarionResultStatus.Exception => StatusCode(500,response.Message),
@@ -28,7 +28,7 @@ namespace CentralPaymentWebApi.Abstractions
 			return response.Status switch
 			{
 				ApplicarionResultStatus.Created => Created(string.Empty, response.Message),
-				ApplicarionResultStatus.Accepted => Accepted(response.Message),
+				ApplicarionResultStatus.Accepted => Accepted(string.Empty,response.Message),
 				ApplicarionResultStatus.NotFound => NotFound(response.Message),
 				ApplicarionResultStatus.ValidationError => BadRequest(response.Message),
 				ApplicarionResultStatus.Exception => StatusCode(500, response.Message),

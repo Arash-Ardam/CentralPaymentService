@@ -3,6 +3,7 @@
 	public enum BankCode
 	{
 		None = 0,
-		Saman = 1
+		Saman = 1,
+		Tejarat = 2
 	}
 }

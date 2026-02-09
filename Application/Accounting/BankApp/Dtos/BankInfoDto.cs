@@ -4,6 +4,7 @@ namespace Application.Accounting.BankApp.Dtos
 {
 	public class BankInfoDto()
 	{
+		public Guid Id { get; set; }
 		public string Title { get; set; }
 		public BankCode Code { get; set; }
 		public bool Status { get; set; }

@@ -9,6 +9,7 @@ namespace Application.Abstractions.Mappers
 		public CustomerMapper()
 		{
 			CreateMap<Customer, CustomerInfoDto>()
+				.ForMember(mem => mem.Id,opt => opt.MapFrom(src => src.Id))
 				.ForMember(mem => mem.FirstName, opt => opt.MapFrom(src => src.Info.FirstName ?? string.Empty))
 				.ForMember(mem => mem.LastName, opt => opt.MapFrom(src => src.Info.LastName ?? string.Empty))
 				.ForMember(mem => mem.NationalCode, opt => opt.MapFrom(src => src.Info.NationalCode ?? string.Empty));

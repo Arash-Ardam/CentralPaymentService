@@ -46,7 +46,7 @@ namespace Application.Accounting.BankApp
 
 				response.Data = createdBank.Id;
 				response.Status = ApplicarionResultStatus.Created;
-				response.Message = "Bank created successfully";
+				response.Message = $"Bank wiht Id:{createdBank.Id} created successfully";
 				return response;
 			}
 			catch (Exception ex)
@@ -154,6 +154,26 @@ namespace Application.Accounting.BankApp
 			{
 				response.IsSuccess= false;
 				response.Status= ApplicarionResultStatus.Exception;
+				response.Message = ex.Message;
+				return response;
+			}
+		}
+
+		public async Task<ApplicationResponse<List<BankInfoDto>>> GetAll()
+		{
+			var response = new ApplicationResponse<List<BankInfoDto>>() { IsSuccess = true };
+			try
+			{
+				var banks = await _bankRepository.GetAllAsync();
+
+				response.Data = _mapper.Map<List<BankInfoDto>>(banks);
+				response.Status = ApplicarionResultStatus.Done;
+				return response;
+			}
+			catch (Exception ex)
+			{
+				response.IsSuccess = false;
+				response.Status = ApplicarionResultStatus.Exception;
 				response.Message = ex.Message;
 				return response;
 			}

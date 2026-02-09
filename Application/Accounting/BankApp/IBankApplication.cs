@@ -11,6 +11,7 @@ namespace Application.Accounting.BankApp
 		Task<ApplicationResponse> ChangeStatusAsync(Guid bankId, bool status);
 
 		Task<ApplicationResponse<BankInfoDto>> GetAsync(Guid bankId);
+		Task<ApplicationResponse<List<BankInfoDto>>> GetAll();
 		
 	}
 }

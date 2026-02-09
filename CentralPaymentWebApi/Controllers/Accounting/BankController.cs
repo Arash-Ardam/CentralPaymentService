@@ -38,10 +38,18 @@ namespace CentralPaymentWebApi.Controllers.Accounting
 		public async Task<IActionResult> GetAsync([FromQuery] Guid bankId)
 		{
 			var appResponse = await _bankApplication.GetAsync(bankId);
-			ActionResult = HandleOutput(appResponse);
-
-			return ActionResult;
+			return HandleOutput(appResponse);
 		}
+
+		[HttpGet("getAll")]
+		[ProducesResponseType(statusCode: StatusCodes.Status200OK, Type = typeof(List<BankInfoDto>))]
+		[ProducesResponseType(statusCode: StatusCodes.Status400BadRequest)]
+		public async Task<IActionResult> GetAllAsync()
+		{
+			var appResponse = await _bankApplication.GetAll();
+			return HandleOutput(appResponse);
+		}
+
 
 		[HttpPost("AssignServices")]
 		[ProducesResponseType(statusCode: StatusCodes.Status202Accepted)]
@@ -52,9 +60,7 @@ namespace CentralPaymentWebApi.Controllers.Accounting
 				return BadRequest("Invalid service types");
 
 			var appResponse = await _bankApplication.AssignPaymentServices(assignServiceDto.BankId, assignServiceDto.ServiceTypes);
-			ActionResult = HandleOutput(appResponse);
-
-			return ActionResult;
+			return HandleOutput(appResponse);
 		}
 
 		[HttpPost("ChangeStatus")]
@@ -63,9 +69,7 @@ namespace CentralPaymentWebApi.Controllers.Accounting
 		public async Task<IActionResult> ChangeStatusAsync([FromRoute] Guid bankId, [FromRoute] bool status)
 		{
 			var appResponse = await _bankApplication.ChangeStatusAsync(bankId, status);
-			ActionResult = HandleOutput(appResponse);
-
-			return ActionResult;
+			return HandleOutput(appResponse);
 		}
 	}
 }

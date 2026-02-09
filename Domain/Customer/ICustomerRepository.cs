@@ -8,4 +8,6 @@ public interface ICustomerRepository
 	Task<Customer> GetAsync(Guid id);
 
 	Task DeleteAsync(Guid Id);
+
+	Task<List<Customer>> GetAllAsync();
 }

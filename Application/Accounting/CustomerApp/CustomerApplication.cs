@@ -6,7 +6,6 @@ using Domain.Customer;
 using Domain.Customer.Factories;
 using Domain.Customer.Services;
 using MediatR;
-using System.Net.NetworkInformation;
 
 namespace Application.Accounting.CustomerApp
 {
@@ -39,13 +38,15 @@ namespace Application.Accounting.CustomerApp
 				Guid createdCustomerId = await _customerRepository.AddAsync(customer);
 
 				response.Data = createdCustomerId;
-				response.Message = "Customer created successfully";
+				response.Status = ApplicarionResultStatus.Created;
+				response.Message = $"Customer with Id:{createdCustomerId} created successfully";
 				return response;
 			}
 			catch (Exception ex)
 			{
 				response.IsSuccess = false;
 				response.Message = ex.Message;
+				response.Status = ApplicarionResultStatus.Exception;
 				return response;
 			}
 		}
@@ -64,10 +65,10 @@ namespace Application.Accounting.CustomerApp
 					infoFactory.WithFirstName(informationDto.FirstName);
 
 				if (!string.IsNullOrWhiteSpace(informationDto.LastName))
-					infoFactory.WithFirstName(informationDto.LastName);
+					infoFactory.WithLastName(informationDto.LastName);
 
 				if (!string.IsNullOrWhiteSpace(informationDto.NationalCode))
-					infoFactory.WithFirstName(informationDto.NationalCode);
+					infoFactory.WithNationalCode(informationDto.NationalCode);
 
 				var customerInfo = infoFactory.Build();
 
@@ -76,18 +77,20 @@ namespace Application.Accounting.CustomerApp
 				await _customerRepository.EditAsync(targetCustomer);
 
 				response.Data = targetCustomer.Id;
+				response.Status = ApplicarionResultStatus.Accepted;
 				response.Message = "Customer settings set successfully";
 				return response;
 			}
 			catch (Exception ex)
 			{
 				response.IsSuccess = false;
+				response.Status = ApplicarionResultStatus.Exception;
 				response.Message = ex.Message;
 				return response;
 			}
 		}
 
-		public async Task<ApplicationResponse<Guid>> ChangeStatus(Guid customerId,bool status)
+		public async Task<ApplicationResponse<Guid>> ChangeStatus(Guid customerId, bool status)
 		{
 			var response = new ApplicationResponse<Guid>() { IsSuccess = true };
 			try
@@ -103,12 +106,14 @@ namespace Application.Accounting.CustomerApp
 				await _mediator.Publish(new CustomerStatusChangedEvent(customerId, status));
 
 				response.Data = targetCustomer.Id;
+				response.Status = ApplicarionResultStatus.Accepted;
 				response.Message = "Customer status changed successfully";
 				return response;
 			}
 			catch (Exception ex)
 			{
 				response.IsSuccess = false;
+				response.Status = ApplicarionResultStatus.Exception;
 				response.Message = ex.Message;
 				return response;
 			}
@@ -119,16 +124,38 @@ namespace Application.Accounting.CustomerApp
 			var response = new ApplicationResponse<CustomerInfoDto>() { IsSuccess = true };
 			try
 			{
-				Customer customer = await _customerRepository.GetAsync(customerId) 
+				Customer customer = await _customerRepository.GetAsync(customerId)
 					?? throw new ArgumentException("Customer with given id not found");
 
 				response.Data = _mapper.Map<CustomerInfoDto>(customer);
+				response.Status = ApplicarionResultStatus.Done;
+				return response;
+			}
+			catch (Exception ex)
+			{
+				response.IsSuccess = false;
+				response.Status = ApplicarionResultStatus.Exception;
+				response.Message = ex.Message;
+				return response;
+			}
+		}
+
+		public async Task<ApplicationResponse<List<CustomerInfoDto>>> GetAllAsync()
+		{
+			var response = new ApplicationResponse<List<CustomerInfoDto>>() { IsSuccess = true };
+			try
+			{
+				List<Customer> customer = await _customerRepository.GetAllAsync();
+
+				response.Data = _mapper.Map<List<CustomerInfoDto>>(customer);
+				response.Status = ApplicarionResultStatus.Done;
 				return response;
 			}
 			catch (Exception ex)
 			{
 				response.IsSuccess = false;
 				response.Message = ex.Message;
+				response.Status = ApplicarionResultStatus.Exception;
 				return response;
 			}
 		}

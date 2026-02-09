@@ -29,9 +29,14 @@ namespace Infrastructure.DataManagements.Repositories
 			return bank;
 		}
 
+		public async Task<List<Bank>> GetAllAsync()
+		{
+			return await _dbContext.Banks.AsNoTracking().ToListAsync();
+		}
+
 		public async Task<Bank> GetAsync(Guid bankId)
 		{
-			return await _dbContext.Banks.FirstOrDefaultAsync(bank => bank.Id == bankId);
+			return await _dbContext.Banks.AsNoTracking().FirstOrDefaultAsync(bank => bank.Id == bankId);
 		}
 
 		

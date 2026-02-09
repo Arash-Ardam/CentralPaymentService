@@ -9,5 +9,6 @@ namespace Application.Accounting.CustomerApp
 		Task<ApplicationResponse<Guid>> SetCustomerSettings(InformationDto informationDto);
 		Task<ApplicationResponse<Guid>> ChangeStatus(Guid customerId, bool status);
 		Task<ApplicationResponse<CustomerInfoDto>> GetAsync(Guid customerId);
+		Task<ApplicationResponse<List<CustomerInfoDto>>> GetAllAsync();
 	}
 }
