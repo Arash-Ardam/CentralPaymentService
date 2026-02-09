@@ -38,7 +38,7 @@ namespace Application.Accounting.CustomerApp
 				Guid createdCustomerId = await _customerRepository.AddAsync(customer);
 
 				response.Data = createdCustomerId;
-				response.Status = ApplicarionResultStatus.Created;
+				response.Status = ApplicationResultStatus.Created;
 				response.Message = $"Customer with Id:{createdCustomerId} created successfully";
 				return response;
 			}
@@ -46,7 +46,7 @@ namespace Application.Accounting.CustomerApp
 			{
 				response.IsSuccess = false;
 				response.Message = ex.Message;
-				response.Status = ApplicarionResultStatus.Exception;
+				response.Status = ApplicationResultStatus.Exception;
 				return response;
 			}
 		}
@@ -77,14 +77,14 @@ namespace Application.Accounting.CustomerApp
 				await _customerRepository.EditAsync(targetCustomer);
 
 				response.Data = targetCustomer.Id;
-				response.Status = ApplicarionResultStatus.Accepted;
+				response.Status = ApplicationResultStatus.Accepted;
 				response.Message = "Customer settings set successfully";
 				return response;
 			}
 			catch (Exception ex)
 			{
 				response.IsSuccess = false;
-				response.Status = ApplicarionResultStatus.Exception;
+				response.Status = ApplicationResultStatus.Exception;
 				response.Message = ex.Message;
 				return response;
 			}
@@ -106,14 +106,14 @@ namespace Application.Accounting.CustomerApp
 				await _mediator.Publish(new CustomerStatusChangedEvent(customerId, status));
 
 				response.Data = targetCustomer.Id;
-				response.Status = ApplicarionResultStatus.Accepted;
+				response.Status = ApplicationResultStatus.Accepted;
 				response.Message = "Customer status changed successfully";
 				return response;
 			}
 			catch (Exception ex)
 			{
 				response.IsSuccess = false;
-				response.Status = ApplicarionResultStatus.Exception;
+				response.Status = ApplicationResultStatus.Exception;
 				response.Message = ex.Message;
 				return response;
 			}
@@ -128,13 +128,13 @@ namespace Application.Accounting.CustomerApp
 					?? throw new ArgumentException("Customer with given id not found");
 
 				response.Data = _mapper.Map<CustomerInfoDto>(customer);
-				response.Status = ApplicarionResultStatus.Done;
+				response.Status = ApplicationResultStatus.Done;
 				return response;
 			}
 			catch (Exception ex)
 			{
 				response.IsSuccess = false;
-				response.Status = ApplicarionResultStatus.Exception;
+				response.Status = ApplicationResultStatus.Exception;
 				response.Message = ex.Message;
 				return response;
 			}
@@ -148,14 +148,14 @@ namespace Application.Accounting.CustomerApp
 				List<Customer> customer = await _customerRepository.GetAllAsync();
 
 				response.Data = _mapper.Map<List<CustomerInfoDto>>(customer);
-				response.Status = ApplicarionResultStatus.Done;
+				response.Status = ApplicationResultStatus.Done;
 				return response;
 			}
 			catch (Exception ex)
 			{
 				response.IsSuccess = false;
 				response.Message = ex.Message;
-				response.Status = ApplicarionResultStatus.Exception;
+				response.Status = ApplicationResultStatus.Exception;
 				return response;
 			}
 		}

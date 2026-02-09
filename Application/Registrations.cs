@@ -16,6 +16,7 @@ namespace Application
 			// Register applications
 			services.AddScoped<IBankApplication, BankApplication>();
 			services.AddScoped<ICustomerApplication, CustomerApplication>();
+			services.AddScoped<IAccountApplication, AccountApplication>();
 		}
 	}
 }

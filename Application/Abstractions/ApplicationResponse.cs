@@ -6,7 +6,7 @@ namespace Application.Abstractions
 	{
 		public T? Data { get; set; }
 		public bool IsSuccess { get; set; }
-		public ApplicarionResultStatus Status { get; set; }
+		public ApplicationResultStatus Status { get; set; }
 		public bool IsFailed => !IsSuccess;
 		public string Message { get; set; } = string.Empty;
 	}
@@ -15,7 +15,7 @@ namespace Application.Abstractions
 	{
 		public bool IsSuccess { get; set; }
 		public bool IsFailed => !IsSuccess;
-		public ApplicarionResultStatus Status { get; set; }
+		public ApplicationResultStatus Status { get; set; }
 		public string Message { get; set; } = string.Empty;
 	}
 }

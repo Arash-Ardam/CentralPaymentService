@@ -7,18 +7,16 @@ namespace CentralPaymentWebApi.Abstractions
 	[ApiController]
 	public class ApiControllerBase : ControllerBase
 	{
-		public IActionResult ActionResult;
-
 		public IActionResult HandleOutput<T>(ApplicationResponse<T> response) 
 		{
 			return response.Status switch
 			{
-				ApplicarionResultStatus.Done => Ok(response.Data),
-				ApplicarionResultStatus.Created => Created(string.Empty,response.Message),
-				ApplicarionResultStatus.Accepted => Accepted(string.Empty,response.Message),
-				ApplicarionResultStatus.NotFound => NotFound(response.Message),
-				ApplicarionResultStatus.ValidationError => BadRequest(response.Message),
-				ApplicarionResultStatus.Exception => StatusCode(500,response.Message),
+				ApplicationResultStatus.Done => Ok(response.Data),
+				ApplicationResultStatus.Created => Created(string.Empty,response.Message),
+				ApplicationResultStatus.Accepted => Accepted(string.Empty,response.Message),
+				ApplicationResultStatus.NotFound => NotFound(response.Message),
+				ApplicationResultStatus.ValidationError => BadRequest(response.Message),
+				ApplicationResultStatus.Exception => StatusCode(500,response.Message),
 				_ => BadRequest("an unhandled error")
 			};
 		}
@@ -27,11 +25,11 @@ namespace CentralPaymentWebApi.Abstractions
 		{
 			return response.Status switch
 			{
-				ApplicarionResultStatus.Created => Created(string.Empty, response.Message),
-				ApplicarionResultStatus.Accepted => Accepted(string.Empty,response.Message),
-				ApplicarionResultStatus.NotFound => NotFound(response.Message),
-				ApplicarionResultStatus.ValidationError => BadRequest(response.Message),
-				ApplicarionResultStatus.Exception => StatusCode(500, response.Message),
+				ApplicationResultStatus.Created => Created(string.Empty, response.Message),
+				ApplicationResultStatus.Accepted => Accepted(string.Empty,response.Message),
+				ApplicationResultStatus.NotFound => NotFound(response.Message),
+				ApplicationResultStatus.ValidationError => BadRequest(response.Message),
+				ApplicationResultStatus.Exception => StatusCode(500, response.Message),
 				_ => BadRequest("an unhandled error")
 			};
 		}

@@ -33,15 +33,25 @@ namespace Application.Accounting.AccountApp
 
 			try
 			{
-				var targetBank = await _bankRepository.GetAsync(createAccountDto.BankId)
-				?? throw new ArgumentException($"given target bank with Id: {createAccountDto.BankId} not exists");
+				var targetBank = await _bankRepository.GetAsync(createAccountDto.BankId);
 
-				var targetCustomer = await _customerRepository.GetAsync(createAccountDto.CustomerId)
-					?? throw new ArgumentException($"given target customer with Id: {createAccountDto.CustomerId} not exists");
+				var targetCustomer = await _customerRepository.GetAsync(createAccountDto.CustomerId);
 
 				var isAccountExists = await _accountIdentifierService.IsExists(createAccountDto.Accountnumber, createAccountDto.Iban);
-				if (!isAccountExists)
-					throw new ArgumentException($"given target account with AccountNumber:{createAccountDto.Accountnumber} and Iban: {createAccountDto.Iban} already exists");
+
+				var validation = ValidateCreateAccount(
+					createAccountDto,
+					targetBank,
+					targetCustomer,
+					isAccountExists);
+
+				if (validation != null)
+				{
+					response.IsSuccess = validation.IsSuccess;
+					response.Status = validation.Status;
+					response.Message = validation.Message;
+					return response;
+				}
 
 				var newAccount = new Account(createAccountDto.Accountnumber, createAccountDto.Iban, createAccountDto.ExpireDate);
 
@@ -51,13 +61,15 @@ namespace Application.Accounting.AccountApp
 				var result = await _accountRepository.AddAsync(newAccount);
 
 				response.Data = result;
-				response.Message = "Account created successfully";
+				response.Status = ApplicationResultStatus.Created;
+				response.Message = $"Account with id: ({result}) created successfully";
 
 				return response;
 			}
 			catch (Exception ex)
 			{
 				response.IsSuccess = false;
+				response.Status = ApplicationResultStatus.Exception;
 				response.Message = ex.Message;
 				return response;
 			}
@@ -225,6 +237,24 @@ namespace Application.Accounting.AccountApp
 				response.Message = ex.Message;
 				return response;
 			}
+		}
+
+		private ApplicationResponse ValidateCreateAccount(
+			CreateAccountDto dto,
+			Bank? bank,
+			Customer? customer,
+			bool isAccountExists)
+		{
+			if (bank is null)
+				return ApplicationGuard.ValidationError($"given target bank with Id: {dto.BankId} not exists");
+
+			if (customer is null)
+				return ApplicationGuard.ValidationError($"given target customer with Id: {dto.CustomerId} not exists");
+
+			if (!isAccountExists)
+				return ApplicationGuard.ValidationError($"given target account with AccountNumber:{dto.Accountnumber} and Iban: {dto.Iban} already exists");
+
+			return null;
 		}
 
 	}

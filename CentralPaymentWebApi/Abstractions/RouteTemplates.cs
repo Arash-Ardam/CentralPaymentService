@@ -5,7 +5,7 @@
 		public const string Create = "create";
 		public const string Update = "update";
 		public const string Delete = "delete";
-		public const string Get = "get";
+		public const string Get = "get/{id:guid}";
 		public const string GetAll = "getAll";
 	}
 }

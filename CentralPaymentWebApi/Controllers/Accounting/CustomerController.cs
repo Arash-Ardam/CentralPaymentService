@@ -1,6 +1,7 @@
 ﻿using Application.Accounting.CustomerApp;
 using Application.Accounting.CustomerApp.Dtos;
 using CentralPaymentWebApi.Abstractions;
+using CentralPaymentWebApi.Dtos.CustomerApi;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CentralPaymentWebApi.Controllers.Accounting
@@ -49,11 +50,11 @@ namespace CentralPaymentWebApi.Controllers.Accounting
 		[HttpPost("{customerId}/status")]
 		[ProducesResponseType(statusCode: StatusCodes.Status202Accepted)]
 		[ProducesResponseType(statusCode: StatusCodes.Status400BadRequest)]
-		public async Task<IActionResult> SetStatusAsync([FromRoute] Guid customerId, [FromBody] bool status)
+		public async Task<IActionResult> SetStatusAsync([FromBody] ChangeStatusDto statusDto)
 		{
 			try
 			{
-				var appResponse = await _customerApp.ChangeStatus(customerId, status);
+				var appResponse = await _customerApp.ChangeStatus(statusDto.CustomerId, statusDto.Status);
 				return HandleOutput(appResponse);
 			}
 			catch (Exception ex)
@@ -66,7 +67,7 @@ namespace CentralPaymentWebApi.Controllers.Accounting
 		[ProducesResponseType(statusCode: StatusCodes.Status200OK, type: typeof(CustomerInfoDto))]
 		[ProducesResponseType(statusCode: StatusCodes.Status404NotFound)]
 		[ProducesResponseType(statusCode: StatusCodes.Status400BadRequest)]
-		public async Task<IActionResult> GetAsync([FromQuery] Guid customerId)
+		public async Task<IActionResult> GetAsync([FromRoute] Guid customerId)
 		{
 			try
 			{

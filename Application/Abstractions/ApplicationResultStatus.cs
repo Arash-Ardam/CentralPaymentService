@@ -1,6 +1,6 @@
 ﻿namespace Application.Abstractions
 {
-	public enum ApplicarionResultStatus
+	public enum ApplicationResultStatus
 	{
 		Done,
 		Created,

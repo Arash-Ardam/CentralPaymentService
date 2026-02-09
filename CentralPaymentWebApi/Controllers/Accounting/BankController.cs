@@ -2,9 +2,7 @@
 using Application.Accounting.BankApp.Dtos;
 using CentralPaymentWebApi.Abstractions;
 using CentralPaymentWebApi.Dtos.BankApi;
-using Domain.Banking.Bank;
 using Domain.Banking.Bank.Enums;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CentralPaymentWebApi.Controllers.Accounting
@@ -27,15 +25,13 @@ namespace CentralPaymentWebApi.Controllers.Accounting
 				return BadRequest("BankCode is null");
 
 			var appResponse = await _bankApplication.CreateAsync(createDto);
-			ActionResult = HandleOutput(appResponse);
-
-			return ActionResult;
+			return HandleOutput(appResponse);
 		}
 
 		[HttpGet(RouteTemplates.Get)]
-		[ProducesResponseType(statusCode: StatusCodes.Status200OK,Type =typeof(BankInfoDto))]
+		[ProducesResponseType(statusCode: StatusCodes.Status200OK, Type = typeof(BankInfoDto))]
 		[ProducesResponseType(statusCode: StatusCodes.Status400BadRequest)]
-		public async Task<IActionResult> GetAsync([FromQuery] Guid bankId)
+		public async Task<IActionResult> GetAsync([FromRoute] Guid bankId)
 		{
 			var appResponse = await _bankApplication.GetAsync(bankId);
 			return HandleOutput(appResponse);
@@ -66,9 +62,9 @@ namespace CentralPaymentWebApi.Controllers.Accounting
 		[HttpPost("ChangeStatus")]
 		[ProducesResponseType(statusCode: StatusCodes.Status202Accepted)]
 		[ProducesResponseType(statusCode: StatusCodes.Status400BadRequest)]
-		public async Task<IActionResult> ChangeStatusAsync([FromRoute] Guid bankId, [FromRoute] bool status)
+		public async Task<IActionResult> ChangeStatusAsync([FromBody] ChangeStatusDto statusDto)
 		{
-			var appResponse = await _bankApplication.ChangeStatusAsync(bankId, status);
+			var appResponse = await _bankApplication.ChangeStatusAsync(statusDto.Id,statusDto.Status);
 			return HandleOutput(appResponse);
 		}
 	}
