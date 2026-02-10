@@ -31,9 +31,9 @@ namespace CentralPaymentWebApi.Controllers.Accounting
 		[HttpGet(RouteTemplates.Get)]
 		[ProducesResponseType(statusCode: StatusCodes.Status200OK, Type = typeof(BankInfoDto))]
 		[ProducesResponseType(statusCode: StatusCodes.Status400BadRequest)]
-		public async Task<IActionResult> GetAsync([FromRoute] Guid bankId)
+		public async Task<IActionResult> GetAsync([FromRoute] Guid id)
 		{
-			var appResponse = await _bankApplication.GetAsync(bankId);
+			var appResponse = await _bankApplication.GetAsync(id);
 			return HandleOutput(appResponse);
 		}
 
@@ -62,7 +62,7 @@ namespace CentralPaymentWebApi.Controllers.Accounting
 		[HttpPost("ChangeStatus")]
 		[ProducesResponseType(statusCode: StatusCodes.Status202Accepted)]
 		[ProducesResponseType(statusCode: StatusCodes.Status400BadRequest)]
-		public async Task<IActionResult> ChangeStatusAsync([FromBody] ChangeStatusDto statusDto)
+		public async Task<IActionResult> ChangeStatusAsync([FromBody] ChangeBankStatusDto statusDto)
 		{
 			var appResponse = await _bankApplication.ChangeStatusAsync(statusDto.Id,statusDto.Status);
 			return HandleOutput(appResponse);

@@ -34,7 +34,7 @@ namespace CentralPaymentWebApi.Controllers.Accounting
 		[HttpPost("setSettings")]
 		[ProducesResponseType(statusCode: StatusCodes.Status202Accepted)]
 		[ProducesResponseType(statusCode: StatusCodes.Status400BadRequest)]
-		public async Task<IActionResult> SetSettingsAsync(InformationDto infoDto)
+		public async Task<IActionResult> SetSettingsAsync([FromBody] InformationDto infoDto)
 		{
 			try
 			{
@@ -47,10 +47,10 @@ namespace CentralPaymentWebApi.Controllers.Accounting
 			}
 		}
 
-		[HttpPost("{customerId}/status")]
+		[HttpPost("changeStatus")]
 		[ProducesResponseType(statusCode: StatusCodes.Status202Accepted)]
 		[ProducesResponseType(statusCode: StatusCodes.Status400BadRequest)]
-		public async Task<IActionResult> SetStatusAsync([FromBody] ChangeStatusDto statusDto)
+		public async Task<IActionResult> SetStatusAsync([FromBody] ChangeCustomerStatusDto statusDto)
 		{
 			try
 			{
@@ -67,11 +67,11 @@ namespace CentralPaymentWebApi.Controllers.Accounting
 		[ProducesResponseType(statusCode: StatusCodes.Status200OK, type: typeof(CustomerInfoDto))]
 		[ProducesResponseType(statusCode: StatusCodes.Status404NotFound)]
 		[ProducesResponseType(statusCode: StatusCodes.Status400BadRequest)]
-		public async Task<IActionResult> GetAsync([FromRoute] Guid customerId)
+		public async Task<IActionResult> GetAsync([FromRoute] Guid id)
 		{
 			try
 			{
-				var appResponse = await _customerApp.GetAsync(customerId);
+				var appResponse = await _customerApp.GetAsync(id);
 				return HandleOutput(appResponse);
 			}
 			catch (Exception ex)

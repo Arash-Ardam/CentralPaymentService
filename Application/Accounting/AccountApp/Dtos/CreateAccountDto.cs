@@ -1,4 +1,11 @@
 ﻿namespace Application.Accounting.AccountApp.Dtos
 {
-	public record CreateAccountDto(Guid BankId, Guid CustomerId, string Accountnumber, string Iban,DateTimeOffset ExpireDate);
+	public class CreateAccountDto
+	{
+		public Guid BankId { get; set; }
+		public Guid CustomerId { get; set; }
+		public string Accountnumber { get; set; }
+		public string Iban { get; set; } = string.Empty;
+		public DateTimeOffset ExpireDate { get; set; } 
+	}
 }

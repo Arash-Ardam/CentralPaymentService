@@ -39,19 +39,24 @@ namespace Infrastructure.DataManagements.Repositories
 			throw new NotImplementedException();
 		}
 
+		public Task<List<Account>> GetAllAsync()
+		{
+			return _dbContext.Accounts.AsQueryable().ToListAsync();
+		}
+
 		public async Task<Account> GetAsync(Guid accountId)
 		{
 			return await _dbContext.Accounts.FirstOrDefaultAsync(acc => acc.Id == accountId);
 		}
 
-		public async Task<List<Account>> GetByBankId(Guid bankId)
+		public Task<List<Account>> GetByBankId(Guid bankId)
 		{
-			return await _dbContext.Accounts.Where(acc => acc.BankId == bankId).ToListAsync();
+			return  _dbContext.Accounts.Where(acc => acc.BankId == bankId).ToListAsync();
 		}
 
-		public async Task<List<Account>> GetByCustomerId(Guid customerId)
+		public Task<List<Account>> GetByCustomerId(Guid customerId)
 		{
-			return await _dbContext.Accounts.Where(acc => acc.CustomerId == customerId).ToListAsync();
+			return _dbContext.Accounts.Where(acc => acc.CustomerId == customerId).ToListAsync();
 		}
 	}
 }

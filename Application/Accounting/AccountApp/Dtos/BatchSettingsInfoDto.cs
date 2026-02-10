@@ -1,14 +1,11 @@
 ﻿namespace Application.Accounting.AccountApp.Dtos
 {
-	public class BatchSettingsDto
+	public class BatchSettingsInfoDto
 	{
-		public Guid AccountId { get; set; }
+		public bool Status { get; set; }
 		public int MaxTransactionsCount { get; set; }
 		public long MaxDailyAmount { get; set; }
 		public long MinSatnaAmount { get; set; }
-		public DateTimeOffset? ContractExpire { get; set; }
+		public DateTimeOffset ExpireDate { get; set; }
 	}
-	
-		
-	
 }
