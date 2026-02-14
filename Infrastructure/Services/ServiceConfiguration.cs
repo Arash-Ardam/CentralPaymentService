@@ -1,9 +1,7 @@
-﻿using Domain.Banking.Account.Services;
-using Domain.Banking.Bank.Services;
-using Domain.Customer.Services;
-using Infrastructure.Services.DomainServices.Account;
-using Infrastructure.Services.DomainServices.Bank;
-using Infrastructure.Services.DomainServices.Customer;
+﻿using Application.Accounting.AccountApp.Services;
+using Application.Accounting.BankApp.Services;
+using Application.Accounting.CustomerApp.Services;
+using Infrastructure.Services.ApplicationServices.QueryServices;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -13,10 +11,10 @@ namespace Infrastructure.Services
 	{
 		public static void AddInfraServices(this IServiceCollection services, IConfiguration configuration)
 		{
-			// Register Domain related services
-			services.AddScoped<IBankIdentifierService, BankIdentifierService>();
-			services.AddScoped<ICustomerIdentifierService, CustomerIdentifierService>();
-			services.AddScoped<IAccountIdentifierService, AccountIdentifierService>();
+			// Register Application related services
+			services.AddScoped<IAccountQueryService, AccountQueryService>();
+			services.AddScoped<ICustomerQueryService, CustomerQueryService>();
+			services.AddScoped<IBankQueryService, BankQueryService>();
 		}
 	}
 }

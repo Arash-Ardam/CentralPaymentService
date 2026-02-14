@@ -1,10 +1,10 @@
 ﻿using Application.Abstractions;
 using Application.Accounting.CustomerApp.Dtos;
 using Application.Accounting.CustomerApp.Events;
+using Application.Accounting.CustomerApp.Services;
 using AutoMapper;
 using Domain.Customer;
 using Domain.Customer.Factories;
-using Domain.Customer.Services;
 using MediatR;
 
 namespace Application.Accounting.CustomerApp
@@ -12,16 +12,16 @@ namespace Application.Accounting.CustomerApp
 	internal class CustomerApplication : ICustomerApplication
 	{
 		private readonly ICustomerRepository _customerRepository;
-		private readonly ICustomerIdentifierService _customerIdentifierService;
+		private readonly ICustomerQueryService _customerQueryService;
 		private readonly IMediator _mediator;
-		private readonly IMapper _mapper;
 
-		public CustomerApplication(ICustomerRepository customerRepository, ICustomerIdentifierService customerService, IMediator mediator, IMapper mapper)
+		public CustomerApplication(ICustomerRepository customerRepository,
+							 IMediator mediator,
+							 ICustomerQueryService customerQueryService)
 		{
 			_customerRepository = customerRepository ?? throw new ArgumentNullException(nameof(customerRepository));
-			_customerIdentifierService = customerService ?? throw new ArgumentNullException(nameof(customerService));
 			_mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
-			_mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+			_customerQueryService = customerQueryService ?? throw new ArgumentNullException(nameof(customerQueryService));
 		}
 
 		public async Task<ApplicationResponse<Guid>> CreateAsync(CreateCustomerDto createCustomerDto)
@@ -29,9 +29,7 @@ namespace Application.Accounting.CustomerApp
 			var response = new ApplicationResponse<Guid>() { IsSuccess = true };
 			try
 			{
-				bool isExists = await _customerIdentifierService.isCustomerExists(createCustomerDto.TenantName);
-
-				if (isExists)
+				if (await _customerQueryService.IsExists(createCustomerDto.TenantName))
 					throw new ArgumentException($"Customer with tenantName: {createCustomerDto.TenantName} already exists");
 
 				Customer customer = new Customer(createCustomerDto.TenantName);
@@ -124,10 +122,15 @@ namespace Application.Accounting.CustomerApp
 			var response = new ApplicationResponse<CustomerInfoDto>() { IsSuccess = true };
 			try
 			{
-				Customer customer = await _customerRepository.GetAsync(customerId)
-					?? throw new ArgumentException("Customer with given id not found");
+				response.Data = await _customerQueryService.GetAsync(customerId);
+				if(response.Data == null)
+				{
+					response.IsSuccess = false;
+					response.Message = "there is no customer with given id";
+					response.Status = ApplicationResultStatus.ValidationError;
+					return response;
+				}
 
-				response.Data = _mapper.Map<CustomerInfoDto>(customer);
 				response.Status = ApplicationResultStatus.Done;
 				return response;
 			}
@@ -145,9 +148,7 @@ namespace Application.Accounting.CustomerApp
 			var response = new ApplicationResponse<List<CustomerInfoDto>>() { IsSuccess = true };
 			try
 			{
-				List<Customer> customer = await _customerRepository.GetAllAsync();
-
-				response.Data = _mapper.Map<List<CustomerInfoDto>>(customer);
+				response.Data = await _customerQueryService.GetAllAsync();
 				response.Status = ApplicationResultStatus.Done;
 				return response;
 			}

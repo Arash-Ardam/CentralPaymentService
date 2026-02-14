@@ -1,10 +1,10 @@
 ﻿using Application.Abstractions;
 using Application.Accounting.BankApp.Dtos;
 using Application.Accounting.BankApp.Events;
+using Application.Accounting.BankApp.Services;
 using AutoMapper;
 using Domain.Banking.Bank;
 using Domain.Banking.Bank.Enums;
-using Domain.Banking.Bank.Services;
 using MediatR;
 
 namespace Application.Accounting.BankApp
@@ -12,16 +12,14 @@ namespace Application.Accounting.BankApp
 	internal class BankApplication : IBankApplication
 	{
 		private readonly IBankRepository _bankRepository;
-		private readonly IBankIdentifierService _bankIdentifierService;
-		private readonly IMapper _mapper;
 		private readonly IMediator _mediator;
+		private readonly IBankQueryService _bankQueryService;
 
-		public BankApplication(IBankRepository bankRepository, IBankIdentifierService bankIdentifierService, IMediator mediator, IMapper mapper)
+		public BankApplication(IBankRepository bankRepository,IMediator mediator, IBankQueryService bankQueryService)
 		{
 			_bankRepository = bankRepository ?? throw new ArgumentNullException(nameof(bankRepository));
-			_bankIdentifierService = bankIdentifierService ?? throw new ArgumentNullException(nameof(bankIdentifierService));
 			_mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
-			_mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+			_bankQueryService = bankQueryService ?? throw new ArgumentNullException(nameof(bankQueryService));
 		}
 
 		public async Task<ApplicationResponse<Guid>> CreateAsync(CreateBankDto bankDto)
@@ -29,9 +27,7 @@ namespace Application.Accounting.BankApp
 			var response = new ApplicationResponse<Guid>();
 			try
 			{
-				bool isExist = await _bankIdentifierService.IsBankExists(bankDto.Name, bankDto.BankCode);
-
-				if (isExist)
+				if (await _bankQueryService.IsExists(bankDto.Name, bankDto.BankCode))
 				{
 					response.IsSuccess = false;
 					response.Status = ApplicationResultStatus.ValidationError;
@@ -135,8 +131,8 @@ namespace Application.Accounting.BankApp
 			var response = new ApplicationResponse<BankInfoDto>() { IsSuccess = true };
 			try
 			{
-				Bank bank = await _bankRepository.GetAsync(bankId);
-				if (bank is null)
+				response.Data = await _bankQueryService.GetAsync(bankId);
+				if (response.Data is null)
 				{
 					response.IsSuccess = false;
 					response.Status = ApplicationResultStatus.NotFound;
@@ -144,8 +140,6 @@ namespace Application.Accounting.BankApp
 					return response;
 				}
 
-
-				response.Data = _mapper.Map<BankInfoDto>(bank);
 				response.Status = ApplicationResultStatus.Done;
 				return response;
 			}
@@ -163,9 +157,7 @@ namespace Application.Accounting.BankApp
 			var response = new ApplicationResponse<List<BankInfoDto>>() { IsSuccess = true };
 			try
 			{
-				var banks = await _bankRepository.GetAllAsync();
-
-				response.Data = _mapper.Map<List<BankInfoDto>>(banks);
+				response.Data = await _bankQueryService.GetAllAsync();
 				response.Status = ApplicationResultStatus.Done;
 				return response;
 			}

@@ -34,9 +34,10 @@ namespace Infrastructure.DataManagements.Repositories
 			return account.Id;
 		}
 
-		public Task EditRangeAsync(List<Account> accounts)
+		public async Task EditRangeAsync(List<Account> accounts)
 		{
-			throw new NotImplementedException();
+			_dbContext.Accounts.UpdateRange(accounts);
+			await _dbContext.SaveChangesAsync();	
 		}
 
 		public Task<List<Account>> GetAllAsync()

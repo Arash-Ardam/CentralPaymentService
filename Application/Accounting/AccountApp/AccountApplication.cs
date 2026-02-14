@@ -1,8 +1,8 @@
 ﻿using Application.Abstractions;
 using Application.Accounting.AccountApp.Dtos;
+using Application.Accounting.AccountApp.Services;
 using AutoMapper;
 using Domain.Banking.Account;
-using Domain.Banking.Account.Services;
 using Domain.Banking.Bank;
 using Domain.Customer;
 
@@ -10,25 +10,22 @@ namespace Application.Accounting.AccountApp;
 
 internal class AccountApplication : IAccountApplication
 {
-	private readonly IAccountRepository _accountRepository ;
-	private readonly ICustomerRepository _customerRepository ;
-	private readonly IBankRepository _bankRepository ;
-	private readonly IAccountIdentifierService _accountIdentifierService;
-	private readonly IMapper _mapper;
+	private readonly IAccountRepository _accountRepository;
+	private readonly ICustomerRepository _customerRepository;
+	private readonly IBankRepository _bankRepository;
+	private readonly IAccountQueryService _accountQueryService;
 
 
 	public AccountApplication(
 		IAccountRepository accountRepository,
 		ICustomerRepository customerRepository,
 		IBankRepository bankRepository,
-		IAccountIdentifierService accountIdentifierService,
-		IMapper mapper)
+		IAccountQueryService accountQueryService)
 	{
 		_accountRepository = accountRepository ?? throw new ArgumentNullException(nameof(accountRepository));
 		_customerRepository = customerRepository ?? throw new ArgumentNullException(nameof(customerRepository));
 		_bankRepository = bankRepository ?? throw new ArgumentNullException(nameof(bankRepository));
-		_accountIdentifierService = accountIdentifierService ?? throw new ArgumentNullException(nameof(accountIdentifierService));
-		_mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+		_accountQueryService = accountQueryService ?? throw new ArgumentNullException(nameof(accountQueryService));
 	}
 
 	public async Task<ApplicationResponse<Guid>> CreateAsync(CreateAccountDto createAccountDto)
@@ -41,7 +38,7 @@ internal class AccountApplication : IAccountApplication
 
 			var targetCustomer = await _customerRepository.GetAsync(createAccountDto.CustomerId);
 
-			var isAccountExists = await _accountIdentifierService.IsExists(createAccountDto.Accountnumber, createAccountDto.Iban);
+			var isAccountExists = await _accountQueryService.IsExists(createAccountDto.Accountnumber, createAccountDto.Iban);
 
 			var validation = ValidateCreateAccount(
 				createAccountDto,
@@ -79,14 +76,14 @@ internal class AccountApplication : IAccountApplication
 		}
 	}
 
-	public async Task<ApplicationResponse<Guid>> ChangeStatusAsync(Guid accountId,bool status)
+	public async Task<ApplicationResponse<Guid>> ChangeStatusAsync(Guid accountId, bool status)
 	{
 		var response = new ApplicationResponse<Guid>() { IsSuccess = true };
 
 		try
 		{
 			var targetAccount = await _accountRepository.GetAsync(accountId);
-			if(targetAccount is null)
+			if (targetAccount is null)
 			{
 				response.IsSuccess = false;
 				response.Status = ApplicationResultStatus.ValidationError;
@@ -192,6 +189,8 @@ internal class AccountApplication : IAccountApplication
 			else
 				targetAccount.PaymentSettings.Single.Disable();
 
+			await _accountRepository.EditAsync(targetAccount);
+
 			response.Message = "Single settings status changed successfully";
 			response.Status = ApplicationResultStatus.Accepted;
 			return response;
@@ -280,6 +279,8 @@ internal class AccountApplication : IAccountApplication
 			else
 				targetAccount.PaymentSettings.Batch.Disable();
 
+			await _accountRepository.EditAsync(targetAccount);
+
 			response.Message = "Batch settings status changed successfully";
 			response.Status = ApplicationResultStatus.Accepted;
 			return response;
@@ -298,8 +299,8 @@ internal class AccountApplication : IAccountApplication
 		var response = new ApplicationResponse<List<AccountInfoDto>>() { IsSuccess = true };
 		try
 		{
-			var accounts = await _accountRepository.GetAllAsync();
-			response.Data = _mapper.Map<List<AccountInfoDto>>(accounts);
+			var accounts = await _accountQueryService.GetAllAsync();
+			response.Data = accounts;
 			response.Status = ApplicationResultStatus.Done;
 			return response;
 		}
@@ -318,8 +319,8 @@ internal class AccountApplication : IAccountApplication
 		var response = new ApplicationResponse<AccountInfoDto>() { IsSuccess = true };
 		try
 		{
-			var targetAccount = await _accountRepository.GetAsync(accountId);
-			if (targetAccount is null)
+			var targetAccount = await _accountQueryService.GetAsync(accountId);
+			if (targetAccount == default)
 			{
 				response.IsSuccess = false;
 				response.Status = ApplicationResultStatus.ValidationError;
@@ -327,7 +328,7 @@ internal class AccountApplication : IAccountApplication
 				return response;
 			}
 
-			response.Data = _mapper.Map<AccountInfoDto>(targetAccount);
+			response.Data = targetAccount;
 			response.Status = ApplicationResultStatus.Done;
 			return response;
 		}

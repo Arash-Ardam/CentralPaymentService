@@ -11,7 +11,7 @@ namespace CentralPaymentWebApi.Controllers.Accounting
 	{
 		private readonly IAccountApplication _AccountApp;
 		private readonly IMapper _mapper;
-		public AccountController(IAccountApplication accountApplication,IMapper mapper)
+		public AccountController(IAccountApplication accountApplication, IMapper mapper)
 		{
 			_AccountApp = accountApplication ?? throw new ArgumentNullException(nameof(accountApplication));
 			_mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
@@ -35,7 +35,7 @@ namespace CentralPaymentWebApi.Controllers.Accounting
 		}
 
 		[HttpPost("changeStatus")]
-		[ProducesResponseType(statusCode: StatusCodes.Status202Accepted,Type = typeof(string))]
+		[ProducesResponseType(statusCode: StatusCodes.Status202Accepted, Type = typeof(string))]
 		[ProducesResponseType(statusCode: StatusCodes.Status400BadRequest, Type = typeof(string), Description = "پارامتری اشتباه یا نا معتبر وارد شود رخ می دهد")]
 		[ProducesResponseType(statusCode: StatusCodes.Status500InternalServerError)]
 		public async Task<IActionResult> ChangeStatusAsync(ChangeAccountStatusDto statusDto)
@@ -53,13 +53,13 @@ namespace CentralPaymentWebApi.Controllers.Accounting
 
 		[HttpPost("setSingleService")]
 		[ProducesResponseType(statusCode: StatusCodes.Status202Accepted, Type = typeof(string))]
-		[ProducesResponseType(statusCode: StatusCodes.Status400BadRequest, Type = typeof(string),Description ="پارامتری اشتباه یا نا معتبر وارد شود رخ می دهد")]
+		[ProducesResponseType(statusCode: StatusCodes.Status400BadRequest, Type = typeof(string), Description = "پارامتری اشتباه یا نا معتبر وارد شود رخ می دهد")]
 		[ProducesResponseType(statusCode: StatusCodes.Status500InternalServerError)]
 		public async Task<IActionResult> SetSingleServiceAsync(SingleSettingsDto settingDto)
 		{
 			try
 			{
-                var appResponse = await _AccountApp.AddSinglePaymentSettings(settingDto);
+				var appResponse = await _AccountApp.AddSinglePaymentSettings(settingDto);
 				return HandleOutput(appResponse);
 			}
 			catch (Exception ex)
@@ -76,7 +76,7 @@ namespace CentralPaymentWebApi.Controllers.Accounting
 		{
 			try
 			{
-				var appResponse = await _AccountApp.ChangeSingleSettingsStatus(statusDto.AccountId,statusDto.Status);
+				var appResponse = await _AccountApp.ChangeSingleSettingsStatus(statusDto.AccountId, statusDto.Status);
 				return HandleOutput(appResponse);
 			}
 			catch (Exception ex)
@@ -111,6 +111,49 @@ namespace CentralPaymentWebApi.Controllers.Accounting
 			try
 			{
 				var appResponse = await _AccountApp.ChangeBatchSettingsStatus(statusDto.AccountId, statusDto.Status);
+				return HandleOutput(appResponse);
+			}
+			catch (Exception ex)
+			{
+				return BadRequest(ex.Message);
+			}
+		}
+
+		[HttpGet(RouteTemplates.Get)]
+		[ProducesResponseType(statusCode: StatusCodes.Status202Accepted, Type = typeof(AccountInfoDto))]
+		[ProducesResponseType(statusCode: StatusCodes.Status400BadRequest, Type = typeof(string), Description = "پارامتری اشتباه یا نا معتبر وارد شود رخ می دهد")]
+		[ProducesResponseType(statusCode: StatusCodes.Status500InternalServerError)]
+		public async Task<IActionResult> GetAsync(Guid id)
+		{
+			try
+			{
+				var appResponse = await _AccountApp.GetAsync(id);
+				if (appResponse.IsSuccess)
+				{
+					var accountInfoDto = _mapper.Map<AccountInfoDto>(appResponse.Data);
+					return Ok(accountInfoDto);
+				}
+				return HandleOutput(appResponse);
+			}
+			catch (Exception ex)
+			{
+				return BadRequest(ex.Message);
+			}
+		}
+
+		[HttpGet(RouteTemplates.GetAll)]
+		[ProducesResponseType(statusCode: StatusCodes.Status202Accepted, Type = typeof(List<AccountInfoDto>))]
+		[ProducesResponseType(statusCode: StatusCodes.Status500InternalServerError)]
+		public async Task<IActionResult> GetAllAsync()
+		{
+			try
+			{
+				var appResponse = await _AccountApp.GetAllAsync();
+				if (appResponse.IsSuccess)
+				{
+					var accountInfoDto = _mapper.Map<List<AccountInfoDto>>(appResponse.Data);
+					return Ok(accountInfoDto);
+				}
 				return HandleOutput(appResponse);
 			}
 			catch (Exception ex)

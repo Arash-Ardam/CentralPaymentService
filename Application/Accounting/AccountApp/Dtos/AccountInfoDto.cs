@@ -2,10 +2,11 @@
 {
 	public class AccountInfoDto
 	{
-		public string AccountNumber { get; private set; }
-		public string Iban { get; private set; }
-		public DateTimeOffset ExpirationDate { get; private set; }
-		public bool Status { get; private set; }
+		public Guid Id { get; set; }
+		public string AccountNumber { get; set; }
+		public string Iban { get; set; }
+		public DateTimeOffset ExpirationDate { get; set; }
+		public bool Status { get; set; }
 		public string CustomerName { get; set; }
 		public string BankName { get; set; }
 		public SingleSettingsInfoDto? SingleService { get; set; }

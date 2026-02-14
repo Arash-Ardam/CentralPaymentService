@@ -8,7 +8,7 @@ public class Account
 
 	public string AccountNumber { get; private set; }
 	public string Iban { get; private set; }
-	public DateTimeOffset ExpirationDate { get; private set; }
+	public DateTimeOffset? ExpirationDate { get; private set; } 
 	public bool IsEnable { get; private set; } = true;
 
 	public Guid CustomerId { get; private set; }
@@ -20,7 +20,7 @@ public class Account
 	{
 		AccountNumber = accountNumber;
 		Iban = iban;
-		ExpirationDate = expireDate;
+		ExpirationDate = (expireDate == default) ? DateTimeOffset.UtcNow.AddMonths(6) : expireDate;
 	}
 
 	// for ORM bindings

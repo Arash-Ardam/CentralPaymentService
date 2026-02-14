@@ -27,13 +27,13 @@ public class SinglePaymentSettingsFactory
 
 	public SinglePaymentSettingsFactory WithUsername(string value)
 	{
-		TerminalId = value;
+		Username = value;
 		return this;
 	}
 
 	public SinglePaymentSettingsFactory WithPassword(string value)
 	{
-		TerminalId = value;
+		Password = value;
 		return this;
 	}
 

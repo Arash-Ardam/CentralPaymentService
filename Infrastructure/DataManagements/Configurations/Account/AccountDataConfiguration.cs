@@ -25,33 +25,8 @@ namespace Infrastructure.DataManagements.Configurations.Account
 			ps =>
 			{
 				ps.WithOwner();
-
-				// ---------- BatchSettings ----------
-				ps.OwnsOne(
-					x => x.Batch,
-					batch =>
-					{
-						batch.Property(x => x.IsEnable)
-							 .HasColumnName("Batch_IsEnable");
-
-						batch.Property(x => x.ContractExpire)
-							 .HasColumnName("Batch_ContractExpire");
-
-						batch.Property(x => x.MinSatnaAmount)
-							 .HasColumnName("Batch_MinSatnaAmount");
-					});
-
-				// ---------- SingleSettings ----------
-				ps.OwnsOne(
-					x => x.Single,
-					single =>
-					{
-						single.Property(x => x.IsEnable)
-							  .HasColumnName("Single_IsEnable");
-
-						single.Property(x => x.ContractExpire)
-							  .HasColumnName("Single_ContractExpire");
-					});
+				ps.OwnsOne(x => x.Batch);
+				ps.OwnsOne(x => x.Single);
 			});
 		}
 	}
