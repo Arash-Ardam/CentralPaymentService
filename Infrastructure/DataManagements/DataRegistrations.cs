@@ -1,8 +1,11 @@
-﻿using Domain.Banking.Account;
+﻿using Application.OrderManagement.Services;
+using Domain.Banking.Account;
 using Domain.Banking.Bank;
 using Domain.Customer;
 using Domain.Order;
 using Infrastructure.DataManagements.Abstractions;
+using Infrastructure.DataManagements.MultiTenancyServices;
+using Infrastructure.DataManagements.MultiTenancyServices.TenantResolver;
 using Infrastructure.DataManagements.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -12,7 +15,7 @@ namespace Infrastructure.DataManagements
 {
 	public static class DataRegistrations
 	{
-		public static void AddDataManagements(this IServiceCollection services,IConfiguration configuration)
+		public static void AddDataManagements(this IServiceCollection services, IConfiguration configuration)
 		{
 			// Register ORM Tools
 			var efCoreConfig = configuration.GetRequiredSection(nameof(ORMToolsOptions)).Get<ORMToolsOptions>();
@@ -22,7 +25,7 @@ namespace Infrastructure.DataManagements
 			{
 				services.AddDbContext<AdminEfCoreDbContext>(options =>
 				options.UseSqlServer(efCoreConfig.EfCore.BaseConnectionString,
-				sqlOptions => 
+				sqlOptions =>
 				{
 					sqlOptions.MigrationsAssembly(typeof(AdminEfCoreDbContext).Assembly.FullName);
 					sqlOptions.EnableRetryOnFailure(
@@ -34,18 +37,24 @@ namespace Infrastructure.DataManagements
 			}
 
 			// EfCore : Tenant
+
+			services.AddScoped<ITenantContext, TenantContext>();
+			services.AddScoped<ITenantResolver, TenantResolver>();
+
 			if (efCoreConfig.EfCore.isEnable)
 			{
-				services.AddDbContext<TenantEfCoreDbContext>(options =>
-				options.UseSqlServer("Compeleted by related Repo",
-				sqlOptions =>
+				services.AddDbContext<TenantEfCoreDbContext>((serviceProvider, options) =>
 				{
-					sqlOptions.MigrationsAssembly(typeof(TenantEfCoreDbContext).Assembly.FullName);
-					sqlOptions.EnableRetryOnFailure(
-						maxRetryCount: efCoreConfig.EfCore.RetryCount,
-						maxRetryDelay: efCoreConfig.EfCore.RetryDelay,
-						errorNumbersToAdd: null);
-				}),
+					options.UseSqlServer("connectionString",
+					sqlOptions =>
+					{
+						sqlOptions.MigrationsAssembly(typeof(TenantEfCoreDbContext).Assembly.FullName);
+						sqlOptions.EnableRetryOnFailure(
+							maxRetryCount: efCoreConfig.EfCore.RetryCount,
+							maxRetryDelay: efCoreConfig.EfCore.RetryDelay,
+							errorNumbersToAdd: null);
+					});
+				},
 				contextLifetime: ServiceLifetime.Scoped);
 			}
 

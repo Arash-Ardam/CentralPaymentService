@@ -1,6 +1,8 @@
 ﻿using Domain.Order;
 using Infrastructure.DataManagements.Abstractions;
+using Infrastructure.DataManagements.MultiTenancyServices.TenantResolver;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 namespace Infrastructure.DataManagements.Repositories
@@ -8,14 +10,21 @@ namespace Infrastructure.DataManagements.Repositories
 	internal class OrderRepository : IOrderRepository
 	{
 		private readonly TenantEfCoreDbContext _dbContext;
-		private readonly ORMToolsOptions _ormOptions;
+		private readonly ITenantResolver _tenantResolver;
 
-		public OrderRepository(TenantEfCoreDbContext dbContext,IOptions<ORMToolsOptions> ormOptions)
+		public OrderRepository(TenantEfCoreDbContext dbContext,ITenantResolver tenantResolver)
 		{
 			_dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
-			_ormOptions = ormOptions.Value ?? throw new ArgumentNullException(nameof(ormOptions));
+			_tenantResolver = tenantResolver ?? throw new ArgumentNullException(nameof(tenantResolver));
 
-			_dbContext.Database.SetConnectionString(string.Format(_ormOptions.EfCore.TenantConnectionString, "Tenant")); // should be compeleted
+			SetConnectionString();
+		}
+
+		private void SetConnectionString()
+		{
+			var coonectionString = _tenantResolver.Resolve();
+			Console.WriteLine($"Tenant dbContext configed : {coonectionString}");
+			_dbContext.Database.SetConnectionString(coonectionString);
 		}
 
 		public async Task<Order> CreateAsync(Order order)

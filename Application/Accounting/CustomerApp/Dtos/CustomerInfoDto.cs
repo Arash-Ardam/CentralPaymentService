@@ -8,6 +8,7 @@
 		public string NationalCode { get; set; }
 		public string TenantName { get; set; }
 		public bool IsEnable { get; set; }
+		public string ConnectionString { get; set; }
 	}
 }
 	

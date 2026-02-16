@@ -9,5 +9,13 @@
 				Status = ApplicationResultStatus.ValidationError,
 				Message = message
 			};
+
+		public static ApplicationResponse<T> ValidationError<T>(string message)
+			=> new()
+			{
+				IsSuccess = false,
+				Status = ApplicationResultStatus.ValidationError,
+				Message = message
+			};
 	}
 }

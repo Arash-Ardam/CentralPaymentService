@@ -17,6 +17,9 @@ namespace Infrastructure.DataManagements.Configurations.Customer
 			builder.Property(x => x.TenantName)
 				.IsRequired();
 
+			builder.Property(x => x.ConnectionString)
+				.HasDefaultValue(string.Empty);
+
 			builder.OwnsOne(
 				x => x.Info,
 				info =>

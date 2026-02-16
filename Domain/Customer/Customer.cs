@@ -7,7 +7,14 @@ public class Customer
 	public Guid Id { get; set; }
 	public bool IsEnable { get; private set; } = true;
 	public string TenantName { get; private set; } = string.Empty;
+	public string ConnectionString { get; private set; } = string.Empty;
 	public CustomerInformation? Info { get; private set; }
+
+	public Customer(string tenantName,string connectionString)
+	{
+		TenantName = tenantName;
+		ConnectionString = connectionString;
+	}
 
 	public Customer(string tenantName)
 	{

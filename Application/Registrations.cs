@@ -1,6 +1,8 @@
 ﻿using Application.Accounting.AccountApp;
 using Application.Accounting.BankApp;
 using Application.Accounting.CustomerApp;
+using Application.OrderManagement;
+using Application.OrderManagement.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Application
@@ -17,6 +19,10 @@ namespace Application
 			services.AddScoped<IBankApplication, BankApplication>();
 			services.AddScoped<ICustomerApplication, CustomerApplication>();
 			services.AddScoped<IAccountApplication, AccountApplication>();
+
+			services.AddScoped<ISingleOrderApplication, SingleOrderApplication>();
+			services.AddScoped<IPaymentServicesFactory,PaymentServicesFactory>();
+			services.AddScoped<IPaymentPolicyService, PaymentPolicyService>();
 		}
 	}
 }

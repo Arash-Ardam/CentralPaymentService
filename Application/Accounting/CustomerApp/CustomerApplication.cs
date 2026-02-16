@@ -32,7 +32,10 @@ namespace Application.Accounting.CustomerApp
 				if (await _customerQueryService.IsExists(createCustomerDto.TenantName))
 					throw new ArgumentException($"Customer with tenantName: {createCustomerDto.TenantName} already exists");
 
-				Customer customer = new Customer(createCustomerDto.TenantName);
+				Customer customer = string.IsNullOrWhiteSpace(createCustomerDto.connectionString) 
+					? new Customer(createCustomerDto.TenantName) 
+					: new Customer(createCustomerDto.TenantName, createCustomerDto.connectionString);
+
 				Guid createdCustomerId = await _customerRepository.AddAsync(customer);
 
 				response.Data = createdCustomerId;
