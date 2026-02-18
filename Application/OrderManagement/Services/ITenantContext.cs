@@ -4,11 +4,9 @@ namespace Application.OrderManagement.Services
 {
 	public interface ITenantContext
 	{
-		string? TenantName { get; }
-		public CustomerInfoDto? CustomerInfo { get; set; }
-
-		void SetTenant(string tenantName);
-		void SetTenant();
-		CustomerInfoDto? GetCurrentTenant();
+		CustomerInfoDto? Current { get; }
+		void SetTenantByUser();
+		void SetTenantByAdmin(string tenantName);
 	}
+
 }

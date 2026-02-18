@@ -45,7 +45,9 @@ namespace Infrastructure.DataManagements
 			{
 				services.AddDbContext<TenantEfCoreDbContext>((serviceProvider, options) =>
 				{
-					options.UseSqlServer("connectionString",
+					var resolver = serviceProvider.GetRequiredService<TenantResolver>();
+
+					options.UseSqlServer(resolver.Resolve(),
 					sqlOptions =>
 					{
 						sqlOptions.MigrationsAssembly(typeof(TenantEfCoreDbContext).Assembly.FullName);

@@ -4,78 +4,58 @@ using Infrastructure.DataManagements.Abstractions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
-namespace Infrastructure.DataManagements.MultiTenancyServices
+internal class TenantContext : ITenantContext
 {
-	internal class TenantContext : ITenantContext
+	private readonly AdminEfCoreDbContext _dbContext;
+	private readonly IHttpContextAccessor _httpContextAccessor;
+
+	public CustomerInfoDto? Current { get; private set; }
+
+	public TenantContext(
+		AdminEfCoreDbContext dbContext,
+		IHttpContextAccessor httpContextAccessor)
 	{
-		private readonly AdminEfCoreDbContext _dbContext;
-		private readonly IHttpContextAccessor _httpContextAccessor;
+		_dbContext = dbContext;
+		_httpContextAccessor = httpContextAccessor;
+	}
 
-		public TenantContext(AdminEfCoreDbContext dbContext, IHttpContextAccessor contextAccessor)
-		{
-			_dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
-			_httpContextAccessor = contextAccessor ?? throw new ArgumentNullException(nameof(contextAccessor));
-		}
+	public void SetTenantByUser()
+	{
+		var tenantName = _httpContextAccessor.HttpContext?
+			.Request.Headers["X-Tenant"]
+			.FirstOrDefault();
 
-		public string? TenantName { get; set; }
-		public CustomerInfoDto? CustomerInfo { get; set; }
+		if (string.IsNullOrWhiteSpace(tenantName))
+			throw new ArgumentException("X-Tenant header is missing");
 
-		public CustomerInfoDto? GetCurrentTenant()
-		{
-			return CustomerInfo;
-		}
+		Current = LoadTenant(tenantName);
+	}
 
-		public void SetTenant(string tenantName)
-		{
-			var customerInfo = (
-								from customer in _dbContext.Customers.AsNoTracking()
-								where customer.TenantName == tenantName
-								select new CustomerInfoDto
-								{
-									FirstName = customer.Info.FirstName,
-									LastName = customer.Info.LastName,
-									Id = customer.Id,
-									NationalCode = customer.Info.NationalCode,
-									TenantName = customer.TenantName,
-									IsEnable = customer.IsEnable,
-									ConnectionString = customer.ConnectionString
-								}).FirstOrDefault();
+	public void SetTenantByAdmin(string tenantName)
+	{
+		if (string.IsNullOrWhiteSpace(tenantName))
+			throw new ArgumentException("tenantName is required");
 
-			if (customerInfo is null)
-				throw new ArgumentException($"tenant: {tenantName} is invalid");
+		Current = LoadTenant(tenantName);
+	}
 
-			CustomerInfo = customerInfo;
-			TenantName = CustomerInfo.TenantName;
-		}
-
-		public void SetTenant()
-		{
-			var tenantName = _httpContextAccessor.HttpContext?
-				.Request.Headers["X-Tenant"]
-				.FirstOrDefault();
-
-			if (tenantName != null || tenantName != TenantName)
+	private CustomerInfoDto LoadTenant(string tenantName)
+	{
+		var customer = _dbContext.Customers
+			.AsNoTracking()
+			.Where(c => c.TenantName == tenantName)
+			.Select(c => new CustomerInfoDto
 			{
-				var customerInfo = (
-								from customer in _dbContext.Customers.AsNoTracking()
-								where customer.TenantName == tenantName
-								select new CustomerInfoDto
-								{
-									FirstName = customer.Info.FirstName,
-									LastName = customer.Info.LastName,
-									Id = customer.Id,
-									NationalCode = customer.Info.NationalCode,
-									TenantName = customer.TenantName,
-									IsEnable = customer.IsEnable,
-									ConnectionString = customer.ConnectionString
-								}).FirstOrDefault();
+				Id = c.Id,
+				TenantName = c.TenantName,
+				ConnectionString = c.ConnectionString,
+				IsEnable = c.IsEnable
+			})
+			.FirstOrDefault();
 
-				if (customerInfo is null)
-					throw new ArgumentException($"tenant: {tenantName} is invalid");
+		if (customer is null)
+			throw new ArgumentException($"Tenant '{tenantName}' not found");
 
-				CustomerInfo = customerInfo;
-				TenantName = CustomerInfo.TenantName;
-			}
-		}
+		return customer;
 	}
 }

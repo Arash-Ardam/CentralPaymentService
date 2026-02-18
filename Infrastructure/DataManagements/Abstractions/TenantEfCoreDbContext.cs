@@ -20,5 +20,11 @@ namespace Infrastructure.DataManagements.Abstractions
 
 			base.OnModelCreating(modelBuilder);
 		}
+
+		internal void SetConnectionString(string connectionString)
+		{
+			Database.SetConnectionString(connectionString);
+			ChangeTracker.Clear();
+		}
 	}
 }

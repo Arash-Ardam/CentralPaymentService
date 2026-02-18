@@ -1,4 +1,5 @@
 using Application;
+using CentralPaymentWebApi.Middlewares;
 using Infrastructure.DataManagements;
 using Infrastructure.Services;
 using Scalar.AspNetCore;
@@ -33,6 +34,8 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseAuthorization();
+
+app.UseMiddleware<TenantContextMiddleware>();
 
 app.MapControllers();
 
