@@ -5,16 +5,16 @@ namespace CentralPaymentWebApi.Middlewares
 	public class TenantContextMiddleware
 	{
 		public RequestDelegate Next { get; }
-		public ITenantContext TenantContext { get; }
 
-		public TenantContextMiddleware(RequestDelegate next,ITenantContext tenantContext)
+		public TenantContextMiddleware(RequestDelegate next)
 		{
 			Next = next ?? throw new ArgumentNullException(nameof(next));
-			TenantContext = tenantContext ?? throw new ArgumentNullException(nameof(tenantContext));
 		}
 
-		public async Task InvokeAsync(HttpContext context,ITenantContext tenantContext)
+		public async Task InvokeAsync(HttpContext context)
 		{
+			var tenantContext = context.RequestServices.GetService<ITenantContext>();
+
 			if (context.User.IsInRole("User"))
 			{
 				tenantContext.SetTenantByUser();

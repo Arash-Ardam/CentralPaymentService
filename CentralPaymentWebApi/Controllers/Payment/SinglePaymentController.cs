@@ -1,10 +1,12 @@
 ﻿using Application.OrderManagement;
 using Application.OrderManagement.Dtos.SingleOrder;
 using CentralPaymentWebApi.Abstractions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CentralPaymentWebApi.Controllers.Payment;
 
+[Authorize(Policy = AuthorizationConsts.UserPolicy)]
 public class SinglePaymentController : ApiControllerBase
 {
 	private readonly ISingleOrderApplication _singleOrderApp;

@@ -1,5 +1,4 @@
 ﻿using Application.Abstractions;
-using Application.Accounting.AccountApp.Services;
 using Application.OrderManagement.Dtos.SingleOrder;
 using Application.OrderManagement.Mappings;
 using Application.OrderManagement.Services;
@@ -206,7 +205,7 @@ namespace Application.OrderManagement
 				var request = SingleOrderMapper.MapToRequest(order, account, customer);
 
 				var pspService = _paymentServiceFactory.GetPSPPaymentService(bank.Code);
-				if(pspService is null)
+				if (pspService is null)
 				{
 					applicationResponse.IsSuccess = false;
 					applicationResponse.Message = "No PSP service for bank";
@@ -297,7 +296,7 @@ namespace Application.OrderManagement
 				return ApplicationGuard.ValidationError<(Order order, Bank bank, Account account, Customer customer)>($"Target order by id:{orderId} not found");
 
 			var account = await _accountRepository.GetAsync(targetOrder.SourceAccountId);
-			if(account is null)
+			if (account is null)
 				return ApplicationGuard.ValidationError<(Order order, Bank bank, Account account, Customer customer)>("Invalid account");
 
 			var customer = await _customerRepository.GetAsync(account.CustomerId);
@@ -305,7 +304,7 @@ namespace Application.OrderManagement
 				return ApplicationGuard.ValidationError<(Order order, Bank bank, Account account, Customer customer)>("Invalid customer");
 
 			var bank = await _bankRepository.GetAsync(account.BankId);
-			if(bank is null)
+			if (bank is null)
 				return ApplicationGuard.ValidationError<(Order order, Bank bank, Account account, Customer customer)>("Invalid bank");
 
 			return new ApplicationResponse<(Order order, Bank bank, Account account, Customer customer)>()

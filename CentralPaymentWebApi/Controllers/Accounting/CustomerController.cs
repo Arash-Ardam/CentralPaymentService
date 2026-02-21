@@ -2,10 +2,12 @@
 using Application.Accounting.CustomerApp.Dtos;
 using CentralPaymentWebApi.Abstractions;
 using CentralPaymentWebApi.Dtos.CustomerApi;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CentralPaymentWebApi.Controllers.Accounting
 {
+	[Authorize(Policy = AuthorizationConsts.AdminPolicy)]
 	public class CustomerController : ApiControllerBase
 	{
 		public CustomerController(ICustomerApplication customerApplication)

@@ -3,10 +3,12 @@ using Application.Accounting.BankApp.Dtos;
 using CentralPaymentWebApi.Abstractions;
 using CentralPaymentWebApi.Dtos.BankApi;
 using Domain.Banking.Bank.Enums;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CentralPaymentWebApi.Controllers.Accounting
 {
+	[Authorize(Policy = AuthorizationConsts.AdminPolicy)]
 	public class BankController : ApiControllerBase
 	{
 		public BankController(IBankApplication bankApplication)

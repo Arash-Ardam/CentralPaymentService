@@ -3,10 +3,12 @@ using Application.Accounting.AccountApp.Dtos;
 using AutoMapper;
 using CentralPaymentWebApi.Abstractions;
 using CentralPaymentWebApi.Dtos.AccountApi;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CentralPaymentWebApi.Controllers.Accounting
 {
+	[Authorize(Policy = AuthorizationConsts.AdminPolicy)]
 	public class AccountController : ApiControllerBase
 	{
 		private readonly IAccountApplication _AccountApp;
