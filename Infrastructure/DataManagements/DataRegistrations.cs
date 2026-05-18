@@ -45,7 +45,7 @@ namespace Infrastructure.DataManagements
 			{
 				services.AddDbContext<TenantEfCoreDbContext>((serviceProvider, options) =>
 				{
-					var resolver = serviceProvider.GetRequiredService<TenantResolver>();
+					var resolver = serviceProvider.GetRequiredService<ITenantResolver>();
 
 					options.UseSqlServer(resolver.Resolve(),
 					sqlOptions =>
@@ -59,6 +59,10 @@ namespace Infrastructure.DataManagements
 				},
 				contextLifetime: ServiceLifetime.Scoped);
 			}
+
+			// Hosted Service for manage tenants migration
+			services.AddHostedService<TenantMigrationHostedService>();
+
 
 			// Register ORM Configs as Options : using in multiTenancy
 			services.AddOptions<ORMToolsOptions>()

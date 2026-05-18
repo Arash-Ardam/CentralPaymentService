@@ -22,8 +22,8 @@ internal class TenantContext : ITenantContext
 	public void SetTenantByUser()
 	{
 		var tenantName = _httpContextAccessor.HttpContext?
-			.Request.Headers["X-Tenant"]
-			.FirstOrDefault();
+			.User.Claims.FirstOrDefault(claim => claim.Type == "X-Tenant")
+			.Value;
 
 		if (string.IsNullOrWhiteSpace(tenantName))
 			throw new ArgumentException("X-Tenant header is missing");

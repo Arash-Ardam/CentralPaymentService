@@ -36,6 +36,9 @@ public class OrderSpecs
 		NumberOfTransactions = numberOfTransactions;
 	}
 
-
+	private OrderSpecs()
+	{
+		
+	}
 	internal void SetStatus(OrderStatus status) => Status = status;
 }

@@ -25,6 +25,6 @@ internal class TenantResolver : ITenantResolver
 					_tenantContext.Current.TenantName)
 				: _tenantContext.Current.ConnectionString;
 		}
-		return string.Empty;
+		return _options.EfCore.BaseConnectionString;
 	}
 }

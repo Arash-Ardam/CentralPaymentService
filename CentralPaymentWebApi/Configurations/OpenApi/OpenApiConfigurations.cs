@@ -1,23 +1,63 @@
 ﻿using CentralPaymentWebApi.Configurations.Identity;
+using Microsoft.Extensions.Options;
+using Microsoft.OpenApi;
 using Scalar.AspNetCore;
 
 namespace CentralPaymentWebApi.Configurations.OpenApi
 {
 	public static class OpenApiConfigurations
 	{
+
+		public static void AddOpenApiConfigs(this WebApplicationBuilder builder)
+		{
+			var idpSection = builder.Configuration.GetRequiredSection("IdentityOptions");
+			var idpOption = idpSection.Get<IdentityOptions>();
+
+			builder.Services.AddOpenApi(options =>
+			{
+				options.AddDocumentTransformer((document, context, cancellationToken) =>
+				{
+					document.Components ??= new OpenApiComponents();
+
+					document.Components.SecuritySchemes ??=
+						new Dictionary<string, IOpenApiSecurityScheme>();
+
+					document.Components.SecuritySchemes["oauth2"] =
+						new OpenApiSecurityScheme
+						{
+							Type = SecuritySchemeType.OpenIdConnect,
+
+							OpenIdConnectUrl = new Uri(
+								$"{idpOption.Authority}/.well-known/openid-configuration"
+							),
+
+							Description = "KeyCloak Login",
+							Flows = new OpenApiOAuthFlows
+							{
+								Password = new OpenApiOAuthFlow
+								{
+									TokenUrl = new Uri($"{idpOption.Authority}/protocol/openid-connect/token"),
+								}
+							}
+						};
+
+					return Task.CompletedTask;
+				});
+
+			});
+
+		}
+
 		public static void MapScalar(this WebApplication app)
 		{
 			var idpConfig = app.Configuration.GetRequiredSection("IdentityOptions").Get<IdentityOptions>();
 
-			app.MapScalarApiReference(options => options
-				.AddPreferredSecuritySchemes("OAuth2")
-				.AddAuthorizationCodeFlow("OAuth2", flow =>
-				{
-					flow.ClientId = idpConfig.ClientId;
-					flow.ClientSecret = idpConfig.ClientSecret;
-					flow.SelectedScopes = ["admin", "user"];
-				})
-			);
+			app.MapScalarApiReference(options =>
+			{
+				options.WithTitle("CentralPaymentWebApi");
+				options.AddPreferredSecuritySchemes("oauth2");
+			});
+			
 		}
 	}
 }

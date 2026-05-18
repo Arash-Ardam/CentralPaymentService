@@ -5,6 +5,10 @@ namespace Domain.Order.Entities
 {
 	public class GroupedTransaction
 	{
+		private GroupedTransaction()
+		{
+			
+		}
 		public GroupedTransaction(Guid orderId, GroupedTransactionSpecs specs)
 		{
 			OrderId = orderId;

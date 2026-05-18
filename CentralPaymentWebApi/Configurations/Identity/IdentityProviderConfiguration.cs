@@ -28,7 +28,6 @@ public static class IdentityProviderConfiguration
 				ValidateAudience = true,
 				ValidateIssuer = true,
 				ValidIssuer = idpOption.ValidIssuer,
-				ValidTypes = new[] { "at+jwt" },
 				NameClaimType = ClaimTypes.Name,
 				RoleClaimType = ClaimTypes.Role
 			};

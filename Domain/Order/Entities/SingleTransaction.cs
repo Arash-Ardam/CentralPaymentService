@@ -4,6 +4,10 @@ namespace Domain.Order.Entities
 {
 	public class SingleTransaction
 	{
+		private SingleTransaction()
+		{
+			
+		}
 		public SingleTransaction(Guid orderId,SingleTransactionSpecs specs)
 		{
 			OrderId = orderId;
