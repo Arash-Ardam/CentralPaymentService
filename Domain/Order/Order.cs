@@ -114,6 +114,9 @@ public class Order
 		if (SingleTransaction is null)
 			throw new ArgumentException($"There is no single transaction for order to remove");
 
+		if (this.Specifics?.Status == OrderStatus.Submited)
+			throw new SystemException($"Finalized Transaction won't be changed");
+
 		SingleTransaction = null;
 	}
 
