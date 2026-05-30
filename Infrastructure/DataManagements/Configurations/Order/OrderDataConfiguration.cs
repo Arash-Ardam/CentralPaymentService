@@ -1,4 +1,5 @@
 ﻿using Domain.Order.Entities;
+using Domain.Order.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -18,6 +19,15 @@ namespace Infrastructure.DataManagements.Configurations.Order
 				{
 					nav.Property(spec => spec.NumberOfTransactions)
 					.HasDefaultValue(0);
+
+					nav.Property(spec => spec.Amount)
+					.IsRequired();
+
+					nav.Property(spec => spec.Description)
+					.IsRequired();
+
+					nav.Property(spec => spec.Type)
+					.HasDefaultValue(PaymentType.None);
 				});
 
 			builder

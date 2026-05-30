@@ -42,17 +42,13 @@ namespace CentralPaymentWebApi.Configurations.OpenApi
 							}
 						};
 
+					
+
 					return Task.CompletedTask;
 				});
 
 			});
-			builder.Services.AddSwaggerGen(opt =>
-			{
-				var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
-				var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
 
-				opt.IncludeXmlComments(xmlPath);
-			});
 		}
 
 		public static void MapScalar(this WebApplication app)

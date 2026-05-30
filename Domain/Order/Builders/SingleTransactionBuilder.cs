@@ -12,7 +12,7 @@ namespace Domain.Order.Builders
 		private string FirstName;
 		private string LastName;
 		private string AccountNumber;
-		private int PaymentId = Random.Shared.Next(1000000000,999999999);
+		private int PaymentId = Random.Shared.Next(100000000,999999999);
 
 
 		public SingleTransactionBuilder ForOrder(Guid orderId)
@@ -55,7 +55,7 @@ namespace Domain.Order.Builders
 
 		public SingleTransactionBuilder ToAccountNumber(string value)
 		{
-			if (!string.IsNullOrWhiteSpace(value))
+			if (string.IsNullOrWhiteSpace(value))
 				throw new ArgumentException("AccountNumber most have a valid value");
 
 			this.AccountNumber = value;

@@ -54,7 +54,7 @@ public class Order
 		if (SingleTransaction is not null)
 			throw new ArgumentException("In Single Order there should be at most one transaction");
 
-		if (transaction.Specs.Amount > Specifics.Amount)
+		if (transaction.Specs.Amount != Specifics.Amount)
 			throw new ArgumentException($"Amount entry hits totalAmount = {Specifics.Amount}, transaction: Amount = {transaction.Specs.Amount}");
 
 		SingleTransaction = transaction;
@@ -184,6 +184,8 @@ public class Order
 
 	private void Submit()
 	{
+		if (Specifics.Status == OrderStatus.Submited || Specifics.Status != OrderStatus.Drafted)
+			throw new SystemException("order is already finalized");
 		Specifics.SetStatus(OrderStatus.Submited);
 	}
 
