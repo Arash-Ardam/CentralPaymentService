@@ -1,5 +1,5 @@
 ﻿using Domain.Order;
-using Infrastructure.DataManagements.Abstractions;
+using Infrastructure.DataManagements.Abstractions.ORMs;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.DataManagements.Repositories

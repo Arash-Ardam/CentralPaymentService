@@ -1,5 +1,5 @@
 ﻿using Domain.Customer;
-using Infrastructure.DataManagements.Abstractions;
+using Infrastructure.DataManagements.Abstractions.ORMs;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.DataManagements.Repositories

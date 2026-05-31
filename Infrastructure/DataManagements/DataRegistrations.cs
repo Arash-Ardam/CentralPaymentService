@@ -3,7 +3,7 @@ using Domain.Banking.Account;
 using Domain.Banking.Bank;
 using Domain.Customer;
 using Domain.Order;
-using Infrastructure.DataManagements.Abstractions;
+using Infrastructure.DataManagements.Abstractions.ORMs;
 using Infrastructure.DataManagements.MultiTenancyServices;
 using Infrastructure.DataManagements.MultiTenancyServices.TenantResolver;
 using Infrastructure.DataManagements.Repositories;

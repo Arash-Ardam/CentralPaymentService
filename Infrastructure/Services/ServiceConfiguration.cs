@@ -2,6 +2,7 @@
 using Application.Accounting.BankApp.Services;
 using Application.Accounting.CustomerApp.Services;
 using Infrastructure.Services.ApplicationServices.QueryServices;
+using Infrastructure.Services.BackgroundServices;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -15,6 +16,8 @@ namespace Infrastructure.Services
 			services.AddScoped<IAccountQueryService, AccountQueryService>();
 			services.AddScoped<ICustomerQueryService, CustomerQueryService>();
 			services.AddScoped<IBankQueryService, BankQueryService>();
+
+			services.AddHostedService<ReportEventBackgroundService>();
 		}
 	}
 }

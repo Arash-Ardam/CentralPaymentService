@@ -1,6 +1,6 @@
 ﻿using Application.Accounting.AccountApp.Dtos;
 using Application.Accounting.AccountApp.Services;
-using Infrastructure.DataManagements.Abstractions;
+using Infrastructure.DataManagements.Abstractions.ORMs;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Services.ApplicationServices.QueryServices

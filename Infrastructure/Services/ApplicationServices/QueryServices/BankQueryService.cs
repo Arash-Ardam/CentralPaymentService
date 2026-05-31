@@ -2,7 +2,7 @@
 using Application.Accounting.BankApp.Services;
 using Domain.Banking.Bank;
 using Domain.Banking.Bank.Enums;
-using Infrastructure.DataManagements.Abstractions;
+using Infrastructure.DataManagements.Abstractions.ORMs;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Services.ApplicationServices.QueryServices

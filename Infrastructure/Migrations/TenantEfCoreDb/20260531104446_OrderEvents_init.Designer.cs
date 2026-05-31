@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Migrations.TenantEfCoreDb
 {
     [DbContext(typeof(TenantEfCoreDbContext))]
-    [Migration("20260518060150_init_Tenant")]
-    partial class init_Tenant
+    [Migration("20260531104446_OrderEvents_init")]
+    partial class OrderEvents_init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -99,6 +99,47 @@ namespace Infrastructure.Migrations.TenantEfCoreDb
                     b.HasKey("Id");
 
                     b.ToTable("Orders", (string)null);
+                });
+
+            modelBuilder.Entity("Infrastructure.DataManagements.DataModels.OrderEventModel", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Error")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("EventType")
+                        .HasColumnType("int");
+
+                    b.Property<string>("OrderId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("PaymentType")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("Processed")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset?>("ProcessedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("TenantName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("OrderEvents", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Order.Entities.GroupedTransaction", b =>
@@ -226,6 +267,13 @@ namespace Infrastructure.Migrations.TenantEfCoreDb
                             b1.Property<Guid>("OrderId")
                                 .HasColumnType("uniqueidentifier");
 
+                            b1.Property<long>("Amount")
+                                .HasColumnType("bigint");
+
+                            b1.Property<string>("Description")
+                                .IsRequired()
+                                .HasColumnType("nvarchar(max)");
+
                             b1.Property<int>("NumberOfTransactions")
                                 .ValueGeneratedOnAdd()
                                 .HasColumnType("int")
@@ -233,6 +281,11 @@ namespace Infrastructure.Migrations.TenantEfCoreDb
 
                             b1.Property<int>("Status")
                                 .HasColumnType("int");
+
+                            b1.Property<int>("Type")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("int")
+                                .HasDefaultValue(0);
 
                             b1.HasKey("OrderId");
 
