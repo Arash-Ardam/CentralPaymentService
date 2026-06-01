@@ -11,7 +11,8 @@ namespace Infrastructure.DataManagements.Configurations.Order
 			builder.ToTable("OrderEvents");
 			builder.HasKey(e => e.Id);
 
-
+			builder.Property(e => e.RetryCount)
+				.HasDefaultValue(0);
 		}
 	}
 }

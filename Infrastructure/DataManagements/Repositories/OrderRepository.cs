@@ -16,7 +16,6 @@ namespace Infrastructure.DataManagements.Repositories
 		public async Task<Order> CreateAsync(Order order)
 		{
 			await _dbContext.Orders.AddAsync(order);
-			await _dbContext.SaveChangesAsync();
 
 			return order;
 		}
@@ -50,7 +49,6 @@ namespace Infrastructure.DataManagements.Repositories
 		public async Task UpdateAsync(Order order)
 		{
 			_dbContext.Update(order);
-			await _dbContext.SaveChangesAsync();
 		}
 	}
 }

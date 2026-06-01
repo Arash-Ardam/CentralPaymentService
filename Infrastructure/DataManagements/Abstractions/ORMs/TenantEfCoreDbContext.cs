@@ -19,7 +19,8 @@ namespace Infrastructure.DataManagements.Abstractions.ORMs
 			modelBuilder.ApplyConfiguration(new GroupedTransactionConfiguration());
 			modelBuilder.ApplyConfiguration(new SingleTransactionConfiguration());
 			modelBuilder.ApplyConfiguration(new OrderDataConfiguration());
-			modelBuilder.ApplyConfiguration(new OrderEventsConfiguration());	
+			modelBuilder.ApplyConfiguration(new OrderEventsConfiguration());
+			modelBuilder.ApplyConfiguration(new OrderReportConfiguration());
 
 			base.OnModelCreating(modelBuilder);
 		}

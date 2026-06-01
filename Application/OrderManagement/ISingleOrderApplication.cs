@@ -11,5 +11,7 @@ namespace Application.OrderManagement
 		Task<ApplicationResponse> FinalizeOrder(Guid OrderId);
 		Task<ApplicationResponse> SendOrderAsync(Guid orderId);
 		Task<ApplicationResponse> InquiryPaymentOrder(Guid orderId);
+
+		Task<ApplicationResponse<SingleOrderReportDto>> ReportAsync(string orderId);
 	}
 }

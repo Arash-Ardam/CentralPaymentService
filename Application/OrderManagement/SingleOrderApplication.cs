@@ -1,4 +1,5 @@
 ﻿using Application.Abstractions;
+using Application.OrderManagement.Dtos.OrderEvent;
 using Application.OrderManagement.Dtos.SingleOrder;
 using Application.OrderManagement.Mappings;
 using Application.OrderManagement.Services;
@@ -6,6 +7,8 @@ using Domain.Banking.Account;
 using Domain.Banking.Bank;
 using Domain.Customer;
 using Domain.Order;
+using Domain.Order.Enums;
+using System.Text.Json;
 
 namespace Application.OrderManagement
 {
@@ -16,6 +19,9 @@ namespace Application.OrderManagement
 		private readonly ICustomerRepository _customerRepository;
 		private readonly IBankRepository _bankRepository;
 		private readonly ITenantContext _tenantContext;
+		private readonly IUnitOfWork _unitOfWork;
+		private readonly IOrderReportService _reportService;
+		private readonly IOrderEventService _orderEventService;
 		private readonly IPaymentServicesFactory _paymentServiceFactory;
 
 		public SingleOrderApplication(IAccountRepository accountRespository,
@@ -24,7 +30,10 @@ namespace Application.OrderManagement
 							 IPaymentServicesFactory pspServiceFactory,
 							 IBankRepository bankRepository,
 							 IPaymentPolicyService paymentPolicyService,
-							 ITenantContext tenantContext)
+							 ITenantContext tenantContext,
+							 IOrderReportService reportService,
+							 IOrderEventService orderEventService,
+							 IUnitOfWork unitOfWork)
 		{
 			_accountRepository = accountRespository ?? throw new ArgumentNullException(nameof(accountRespository));
 			_orderRepository = orderRepository ?? throw new ArgumentNullException(nameof(orderRepository));
@@ -32,6 +41,9 @@ namespace Application.OrderManagement
 			_paymentServiceFactory = pspServiceFactory ?? throw new ArgumentNullException(nameof(pspServiceFactory));
 			_bankRepository = bankRepository ?? throw new ArgumentNullException(nameof(bankRepository));
 			_tenantContext = tenantContext ?? throw new ArgumentNullException(nameof(tenantContext));
+			_reportService = reportService ?? throw new ArgumentNullException(nameof(reportService));
+			_orderEventService = orderEventService ?? throw new ArgumentNullException(nameof(orderEventService));
+			_unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
 		}
 
 		public async Task<ApplicationResponse<Guid>> CreateAsync(CreateSingleOrderDto orderDto)
@@ -57,11 +69,48 @@ namespace Application.OrderManagement
 					return response;
 				}
 
+				var customer = await _customerRepository.GetAsync(targetAccount.CustomerId);
+				if (customer is null)
+				{
+					response.IsSuccess = false;
+					response.Status = ApplicationResultStatus.NotFound;
+					response.Message = $"Invalid customer";
+					return response;
+				}
+
 				bank.EnsureHasSingleService();
 				targetAccount.EnsureSingleServiceAvailable();
 
 				var order = OrderFactory.CreateSingle(targetAccount.Id, orderDto.Amount, orderDto.Description);
 				var result = await _orderRepository.CreateAsync(order);
+				var payload = JsonSerializer.Serialize(new SingleOrderReportDto
+				{
+					OwnerFullName = $"{customer.Info.FirstName} {customer.Info.LastName}",
+					SourceAccount = targetAccount.AccountNumber,
+					Amount = order.Specifics.Amount,
+					Description = order.Specifics.Description,
+					Status = Domain.Order.Enums.OrderStatus.Drafted,
+					TenantName = customer.TenantName,
+					OrderId = order.OrderId,
+				});
+				await _orderEventService.AddAsync(new OrderEventDto
+				{
+					OrderId =order.OrderId,
+					PaymentType = PaymentType.Single,
+					EventType = Enums.OrderEventType.Create,
+					Payload = JsonSerializer.Serialize(new SingleOrderReportDto
+					{
+						OwnerFullName = $"{customer.Info.FirstName} {customer.Info.LastName}",
+						SourceAccount = targetAccount.AccountNumber,
+						Amount = order.Specifics.Amount,
+						Description = order.Specifics.Description,
+						Status = Domain.Order.Enums.OrderStatus.Drafted,
+						TenantName = customer.TenantName,
+						OrderId = order.OrderId,
+					})
+				});
+
+				await _unitOfWork.SaveTenantChangesAsync();
 
 				response.Data = result.Id;
 				response.Status = ApplicationResultStatus.Created;
@@ -107,6 +156,26 @@ namespace Application.OrderManagement
 
 				await _orderRepository.UpdateAsync(targerOrder);
 
+
+				var oldEvent = await _orderEventService.FindAsync(targerOrder.OrderId);
+				if(oldEvent is not null)
+				{
+					var reportDto = JsonSerializer.Deserialize<SingleOrderReportDto>(oldEvent.Payload);
+					reportDto.DepositFullName = $"{targerOrder.SingleTransaction.Specs.FirstName} {targerOrder.SingleTransaction.Specs.LastName}";
+					reportDto.DepositAccount = targerOrder.SingleTransaction.Specs.AccountNumber;
+					reportDto.Status = OrderStatus.Drafted;
+
+					await _orderEventService.AddAsync(new OrderEventDto
+					{
+						OrderId = targerOrder.OrderId,
+						PaymentType = PaymentType.Single,
+						EventType = Enums.OrderEventType.AddSpecs,
+						Payload = JsonSerializer.Serialize(reportDto)
+					});
+				}
+
+				await _unitOfWork.SaveTenantChangesAsync();
+
 				response.Data = targerOrder.Id;
 				response.Status = ApplicationResultStatus.Accepted;
 				response.Message = "transaction added successfully";
@@ -139,6 +208,25 @@ namespace Application.OrderManagement
 				targerOrder.RemoveSingleTransaction();
 				await _orderRepository.UpdateAsync(targerOrder);
 
+				var oldEvent = await _orderEventService.FindAsync(targerOrder.OrderId);
+				if (oldEvent is not null)
+				{
+					var reportDto = JsonSerializer.Deserialize<SingleOrderReportDto>(oldEvent.Payload);
+					reportDto.DepositFullName =string.Empty;
+					reportDto.DepositAccount = string.Empty;
+					reportDto.Status = OrderStatus.Drafted;
+
+					await _orderEventService.AddAsync(new OrderEventDto
+					{
+						OrderId = targerOrder.OrderId,
+						PaymentType = PaymentType.Single,
+						EventType = Enums.OrderEventType.AddSpecs,
+						Payload = JsonSerializer.Serialize(reportDto)
+					});
+				}
+
+				await _unitOfWork.SaveTenantChangesAsync();
+
 				response.Message = "transaction removed successfully";
 				response.Status = ApplicationResultStatus.Accepted;
 				return response;
@@ -168,6 +256,24 @@ namespace Application.OrderManagement
 
 				targerOrder.FinalizeSingleOrder();
 				await _orderRepository.UpdateAsync(targerOrder);
+
+
+				var oldEvent = await _orderEventService.FindAsync(targerOrder.OrderId);
+				if (oldEvent is not null)
+				{
+					var reportDto = JsonSerializer.Deserialize<SingleOrderReportDto>(oldEvent.Payload);
+					reportDto.DepositFullName = $"{targerOrder.SingleTransaction.Specs.FirstName} {targerOrder.SingleTransaction.Specs.LastName}";
+					reportDto.DepositAccount = targerOrder.SingleTransaction.Specs.AccountNumber;
+					reportDto.Status = OrderStatus.Submited;
+
+					await _orderEventService.AddAsync(new OrderEventDto
+					{
+						OrderId = targerOrder.OrderId,
+						PaymentType = PaymentType.Single,
+						EventType = Enums.OrderEventType.Submit,
+						Payload = JsonSerializer.Serialize(reportDto)
+					});
+				}
 
 				response.Message = "order finalized and ready to proccess";
 				response.Status = ApplicationResultStatus.Accepted;
@@ -288,6 +394,33 @@ namespace Application.OrderManagement
 			}
 		}
 
+		public async Task<ApplicationResponse<SingleOrderReportDto>> ReportAsync(string orderId)
+		{
+			var response = new ApplicationResponse<SingleOrderReportDto>() { IsSuccess = true };
+			try
+			{
+				var report = await _reportService.ReportSingleOrderAsync(orderId);
+
+				if(report is null)
+				{
+					response.IsSuccess = false;
+					response.Status = ApplicationResultStatus.NotFound;
+					response.Message = "invalid order Id";
+					return response;
+				}
+
+				response.Data = report;
+				response.Status = ApplicationResultStatus.Done;
+				return response;
+			}
+			catch (Exception ex)
+			{
+				response.IsSuccess = false;
+				response.Status = ApplicationResultStatus.Exception;
+				response.Message = ex.Message;
+				return response;
+			}
+		}
 
 		private async Task<ApplicationResponse<(Order order, Bank bank, Account account, Customer customer)>> LoadOrderRequiredContexts(Guid orderId)
 		{
@@ -314,5 +447,6 @@ namespace Application.OrderManagement
 			};
 		}
 
+	
 	}
 }

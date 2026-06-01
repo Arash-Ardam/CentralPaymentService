@@ -136,7 +136,7 @@ public class SinglePaymentController : ApiControllerBase
 	/// </summary>
 	/// <param name="orderId"></param>
 	/// <returns></returns>
-	[HttpPost("transaction/{orderId}/inquiry")]
+	[HttpPost("{orderId}/inquiry")]
 	[ProducesResponseType(StatusCodes.Status202Accepted, Type = typeof(string))]
 	[ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(string))]
 	[ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(string))]
@@ -146,6 +146,29 @@ public class SinglePaymentController : ApiControllerBase
 		try
 		{
 			var appResponse = await _singleOrderApp.InquiryPaymentOrder(orderId);
+			return HandleOutput(appResponse);
+		}
+		catch (Exception ex)
+		{
+			return BadRequest(ex.Message);
+		}
+	}
+
+	/// <summary>
+	///   گزارش گیری از وضعیت تراکنش تکی بر اساس شماره دستور پرداخت
+	/// </summary>
+	/// <param name="orderId"></param>
+	/// <returns></returns>
+	[HttpGet("{orderId}/report")]
+	[ProducesResponseType(StatusCodes.Status202Accepted, Type = typeof(SingleOrderReportDto))]
+	[ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(string))]
+	[ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(string))]
+	[ProducesResponseType(StatusCodes.Status500InternalServerError, Type = typeof(string))]
+	public async Task<IActionResult> InquiryFromBank(string orderId)
+	{
+		try
+		{
+			var appResponse = await _singleOrderApp.ReportAsync(orderId);
 			return HandleOutput(appResponse);
 		}
 		catch (Exception ex)

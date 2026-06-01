@@ -1,4 +1,5 @@
-﻿using Domain.Order.Enums;
+﻿using Application.OrderManagement.Enums;
+using Domain.Order.Enums;
 using Infrastructure.DataManagements;
 using Infrastructure.DataManagements.Abstractions.ORMs;
 using Infrastructure.DataManagements.DataModels;
@@ -25,28 +26,65 @@ namespace Infrastructure.Services.BackgroundServices
 		{
 			while (!stoppingToken.IsCancellationRequested)
 			{
-				var adminDb = _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<AdminEfCoreDbContext>();
+				/* 
+				 الان:
 
-				var tenants = adminDb.Customers
+var adminDb = _serviceScopeFactory
+    .CreateScope()
+    .ServiceProvider
+    .GetRequiredService<AdminEfCoreDbContext>();
+
+اینجا Scope ساخته شده ولی Dispose نشده.
+
+همین مشکل برای:
+
+var tenantDb = _serviceScopeFactory
+    .CreateScope()
+    .ServiceProvider
+    .GetRequiredService<TenantEfCoreDbContext>();
+
+هم وجود داره.
+
+بهتر:
+
+using var scope = _serviceScopeFactory.CreateScope();
+
+var adminDb =
+    scope.ServiceProvider
+        .GetRequiredService<AdminEfCoreDbContext>();
+
+و برای Tenant هم مشابه.
+				 */
+				using var  scope = _serviceScopeFactory.CreateScope();
+				var adminDb = scope.ServiceProvider.GetRequiredService<AdminEfCoreDbContext>();
+
+				var tenants = await adminDb.Customers
 					.AsNoTracking()
 					.Select(x => new
 					{
 						id = x.Id,
 						name = x.TenantName,
 						connectionString = x.ConnectionString	
-					}).ToList();
+					}).ToListAsync(stoppingToken);
+				
 
 				foreach (var tenant in tenants)
 				{
 					var connectionString = string.IsNullOrWhiteSpace(tenant.connectionString) ? 
 						string.Format(_options.EfCore.TenantConnectionString,tenant.name): tenant.connectionString;
 
-					var tenantDb = _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<TenantEfCoreDbContext>();
-					tenantDb.Database.SetConnectionString(connectionString);
+					var options = new DbContextOptionsBuilder<TenantEfCoreDbContext>()
+						.UseSqlServer(connectionString)
+						.Options;
 
-					var orderEvents = tenantDb.OrderEvents
+					await using var tenantDb =
+						new TenantEfCoreDbContext(options);
+
+					var orderEvents = await tenantDb.OrderEvents
 						.Where(x => x.Processed == false)
-						.ToList();
+						.OrderBy(x => x.CreatedAt)
+						.Take(100)
+						.ToListAsync(stoppingToken);
 
 					if (!orderEvents.Any())
 						continue;
@@ -55,55 +93,83 @@ namespace Infrastructure.Services.BackgroundServices
 					{
 						try
 						{
+							if (orderEvent.RetryCount >= 5)
+							{
+								orderEvent.Processed = true;
+								orderEvent.Error = "Retry count hits";
+								continue;
+							}
+
 							if (orderEvent.PaymentType == PaymentType.Single)
 							{
-								var reportModel = JsonSerializer.Deserialize<SingleOrderReportModel>(orderEvent.Payload);
+								SingleOrderReportModel? reportModel;
+
+								try
+								{
+									reportModel = JsonSerializer.Deserialize<SingleOrderReportModel>(
+										orderEvent.Payload);
+								}
+								catch (JsonException ex)
+								{
+									orderEvent.Error = ex.ToString();
+									orderEvent.RetryCount++;
+									continue;
+								}
+
 								if (reportModel != null)
 								{
-									await tenantDb.SingleOrderReports.AddAsync(new SingleOrderReportModel
-										{
-											OrderId = reportModel.OrderId,
-											TenantName = reportModel.TenantName,
-											OwnerFullName = reportModel.OwnerFullName,
-											SourceAccount = reportModel.SourceAccount,
-											Amount = reportModel.Amount,
-											Description = reportModel.Description,
-											Status = reportModel.Status,
-											DepositFullName = reportModel.DepositFullName,
-											DepositAccount = reportModel.DepositAccount
-										}, stoppingToken);
+									switch (orderEvent.EventType)
+									{
+										case OrderEventType.Create:
+											{
+												var exists =
+												await tenantDb.SingleOrderReports
+													.AnyAsync(
+														x => x.OrderId == reportModel.OrderId,
+														stoppingToken);
 
-									await adminDb.SingleOrderReports.AddAsync(new SingleOrderReportModel
-										{
-											OrderId = reportModel.OrderId,
-											TenantName = reportModel.TenantName,
-											OwnerFullName = reportModel.OwnerFullName,
-											SourceAccount = reportModel.SourceAccount,
-											Amount = reportModel.Amount,
-											Description = reportModel.Description,
-											Status = reportModel.Status,
-											DepositFullName = reportModel.DepositFullName,
-											DepositAccount = reportModel.DepositAccount
-										}, stoppingToken);
+												if (!exists)
+													await tenantDb.SingleOrderReports
+														.AddAsync(reportModel, stoppingToken);
+											}
+											break;
+										default:
+											{
+												var tenantReport = await tenantDb.SingleOrderReports.FirstOrDefaultAsync(report => report.OrderId == orderEvent.OrderId);
+												if (tenantReport != null)
+												{
+													tenantReport.OrderId = reportModel.OrderId;
+													tenantReport.TenantName = reportModel.TenantName;
+													tenantReport.OwnerFullName = reportModel.OwnerFullName;
+													tenantReport.SourceAccount = reportModel.SourceAccount;
+													tenantReport.Amount = reportModel.Amount;
+													tenantReport.Description = reportModel.Description;
+													tenantReport.DepositFullName = reportModel.DepositFullName;
+													tenantReport.DepositAccount = reportModel.DepositAccount;
+													tenantReport.Status = reportModel.Status;
+												}	
+											}
+											break;
+									}								
 								}
 							}
 							// TODO: PaymentType.Grouped flow
 
 							// mark event as proccessed
 							orderEvent.Processed = true;
-							orderEvent.ProcessedAt = DateTime.Now;
-							tenantDb.OrderEvents.Update(orderEvent);
-
-							await tenantDb.SaveChangesAsync(stoppingToken);
-							await adminDb.SaveChangesAsync(stoppingToken);
+							orderEvent.ProcessedAt = DateTimeOffset.UtcNow;
 						}
+
+
 						catch (Exception ex)
 						{
 							orderEvent.Processed = false;
-							orderEvent.Error = ex.Message;
-							tenantDb.OrderEvents.Update(orderEvent);
+							orderEvent.RetryCount++;
+							orderEvent.Error = ex.ToString();
 						}
 					}
+
+					await tenantDb.SaveChangesAsync(stoppingToken);
 				}
 
 

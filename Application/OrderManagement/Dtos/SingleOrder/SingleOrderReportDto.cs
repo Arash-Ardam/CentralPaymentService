@@ -1,10 +1,9 @@
 ﻿using Domain.Order.Enums;
 
-namespace Infrastructure.DataManagements.DataModels
+namespace Application.OrderManagement.Dtos.SingleOrder
 {
-	internal class SingleOrderReportModel
+	public sealed class SingleOrderReportDto
 	{
-		public int Id { get; set; }
 		public string OrderId { get; set; } = string.Empty;
 		public string TenantName { get; set; } = string.Empty;
 
