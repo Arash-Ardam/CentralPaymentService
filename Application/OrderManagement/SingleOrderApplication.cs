@@ -275,6 +275,9 @@ namespace Application.OrderManagement
 					});
 				}
 
+
+				await _unitOfWork.SaveTenantChangesAsync();
+
 				response.Message = "order finalized and ready to proccess";
 				response.Status = ApplicationResultStatus.Accepted;
 				return response;
