@@ -1,5 +1,4 @@
-﻿using Application.Abstractions;
-using Application.OrderManagement.Dtos.SingleOrder;
+﻿using Application.OrderManagement.Dtos.SingleOrder;
 
 namespace Application.OrderManagement.Services
 {

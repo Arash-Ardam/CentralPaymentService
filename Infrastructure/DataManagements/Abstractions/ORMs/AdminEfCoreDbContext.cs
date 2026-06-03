@@ -19,11 +19,13 @@ namespace Infrastructure.DataManagements.Abstractions.ORMs
 		public DbSet<Bank> Banks => Set<Bank>();
 		public DbSet<Account> Accounts => Set<Account>();
 		public DbSet<Customer> Customers => Set<Customer>();
+		public DbSet<CustomerEventModel> CustomerEvents => Set<CustomerEventModel>();
 		protected override void OnModelCreating(ModelBuilder modelBuilder)
 		{
 			modelBuilder.ApplyConfiguration(new BankDataConfiguration());
 			modelBuilder.ApplyConfiguration(new CustomerDataConfiguration());
 			modelBuilder.ApplyConfiguration(new AccountDataConfiguration());
+			modelBuilder.ApplyConfiguration(new CustomerEventDataConfiguration());
 
 			base.OnModelCreating(modelBuilder);
 		}

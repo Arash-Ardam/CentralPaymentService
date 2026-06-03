@@ -1,8 +1,8 @@
 ﻿using Application.Abstractions;
+using Application.Abstractions.Services;
 using Application.Accounting.CustomerApp.Dtos;
 using Application.Accounting.CustomerApp.Events;
 using Application.Accounting.CustomerApp.Services;
-using AutoMapper;
 using Domain.Customer;
 using Domain.Customer.Factories;
 using MediatR;
@@ -13,15 +13,20 @@ namespace Application.Accounting.CustomerApp
 	{
 		private readonly ICustomerRepository _customerRepository;
 		private readonly ICustomerQueryService _customerQueryService;
+		private readonly ICustomerEventService _customerEventService;
 		private readonly IMediator _mediator;
-
+		private readonly IUnitOfWork _unitOfWrk;
 		public CustomerApplication(ICustomerRepository customerRepository,
 							 IMediator mediator,
-							 ICustomerQueryService customerQueryService)
+							 ICustomerQueryService customerQueryService,
+							 IUnitOfWork unitOfWrk,
+							 ICustomerEventService customerEventService)
 		{
 			_customerRepository = customerRepository ?? throw new ArgumentNullException(nameof(customerRepository));
 			_mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
 			_customerQueryService = customerQueryService ?? throw new ArgumentNullException(nameof(customerQueryService));
+			_unitOfWrk = unitOfWrk ?? throw new ArgumentNullException(nameof(unitOfWrk));
+			_customerEventService = customerEventService ?? throw new ArgumentNullException(nameof(customerEventService));
 		}
 
 		public async Task<ApplicationResponse<Guid>> CreateAsync(CreateCustomerDto createCustomerDto)
@@ -32,11 +37,20 @@ namespace Application.Accounting.CustomerApp
 				if (await _customerQueryService.IsExists(createCustomerDto.TenantName))
 					throw new ArgumentException($"Customer with tenantName: {createCustomerDto.TenantName} already exists");
 
-				Customer customer = string.IsNullOrWhiteSpace(createCustomerDto.connectionString) 
-					? new Customer(createCustomerDto.TenantName) 
+				Customer customer = string.IsNullOrWhiteSpace(createCustomerDto.connectionString)
+					? new Customer(createCustomerDto.TenantName)
 					: new Customer(createCustomerDto.TenantName, createCustomerDto.connectionString);
 
 				Guid createdCustomerId = await _customerRepository.AddAsync(customer);
+
+				await _customerEventService.PublishEvent(new CustomerEventDto
+				{
+					TenantName = customer.TenantName,
+					Type = Enums.CustomerEventType.Create,
+					ConnectionString = customer.ConnectionString,
+				});
+
+				await _unitOfWrk.SaveAdminChangesAsync();
 
 				response.Data = createdCustomerId;
 				response.Status = ApplicationResultStatus.Created;
@@ -126,7 +140,7 @@ namespace Application.Accounting.CustomerApp
 			try
 			{
 				response.Data = await _customerQueryService.GetAsync(customerId);
-				if(response.Data == null)
+				if (response.Data == null)
 				{
 					response.IsSuccess = false;
 					response.Message = "there is no customer with given id";

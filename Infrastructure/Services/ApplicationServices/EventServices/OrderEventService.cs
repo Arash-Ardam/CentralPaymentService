@@ -6,7 +6,7 @@ using Infrastructure.DataManagements.Abstractions.ORMs;
 using Infrastructure.DataManagements.DataModels;
 using Microsoft.EntityFrameworkCore;
 
-namespace Infrastructure.Services.ApplicationServices
+namespace Infrastructure.Services.ApplicationServices.EventServices
 {
 	internal sealed class OrderEventService : IOrderEventService
 	{

@@ -1,4 +1,4 @@
-﻿namespace Application.OrderManagement.Services
+﻿namespace Application.Abstractions.Services
 {
 	public interface IUnitOfWork
 	{

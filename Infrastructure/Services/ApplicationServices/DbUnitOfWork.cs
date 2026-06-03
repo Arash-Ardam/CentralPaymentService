@@ -1,4 +1,4 @@
-﻿using Application.OrderManagement.Services;
+﻿using Application.Abstractions.Services;
 using Infrastructure.DataManagements.Abstractions.ORMs;
 
 namespace Infrastructure.Services.ApplicationServices

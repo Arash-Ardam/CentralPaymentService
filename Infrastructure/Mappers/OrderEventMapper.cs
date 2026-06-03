@@ -1,10 +1,9 @@
 ﻿using Application.OrderManagement.Dtos.OrderEvent;
-using AutoMapper;
 using Infrastructure.DataManagements.DataModels;
 
 namespace Infrastructure.Mappers
 {
-	internal sealed class OrderEventMapper : Profile
+	internal sealed class OrderEventMapper : MapperBase
 	{
 		public OrderEventMapper()
 		{

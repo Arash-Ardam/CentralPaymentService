@@ -80,6 +80,12 @@ var adminDb =
 					await using var tenantDb =
 						new TenantEfCoreDbContext(options);
 
+					if(!tenantDb.Database.CanConnect())
+					{
+						// log can not connect to tenant database
+						continue;
+					}
+
 					var orderEvents = await tenantDb.OrderEvents
 						.Where(x => x.Processed == false)
 						.OrderBy(x => x.CreatedAt)

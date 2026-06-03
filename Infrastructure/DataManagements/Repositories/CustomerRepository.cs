@@ -15,8 +15,6 @@ namespace Infrastructure.DataManagements.Repositories
 		public async Task<Guid> AddAsync(Customer customer)
 		{
 			await _dbContext.Customers.AddAsync(customer);
-			await _dbContext.SaveChangesAsync();
-
 			return customer.Id;
 		}
 
