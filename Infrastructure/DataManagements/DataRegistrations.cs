@@ -6,6 +6,7 @@ using Domain.Order;
 using Infrastructure.DataManagements.Abstractions.ORMs;
 using Infrastructure.DataManagements.MultiTenancyServices;
 using Infrastructure.DataManagements.MultiTenancyServices.TenantDbContextFactory;
+using Infrastructure.DataManagements.MultiTenancyServices.TenantRegistry;
 using Infrastructure.DataManagements.MultiTenancyServices.TenantResolver;
 using Infrastructure.DataManagements.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -42,6 +43,7 @@ namespace Infrastructure.DataManagements
 			services.AddScoped<ITenantContext, TenantContext>();
 			services.AddScoped<ITenantResolver, TenantResolver>();
 			services.AddScoped<ITenantDbContextFactory, TenantDbContextFactory>();
+			services.AddSingleton<ITenantRegistryService, TenantRegistryService>();	
 			if (efCoreConfig.EfCore.isEnable)
 			{
 				services.AddDbContext<TenantEfCoreDbContext>((serviceProvider, options) =>
@@ -62,6 +64,7 @@ namespace Infrastructure.DataManagements
 			}
 
 			// Hosted Service for manage tenants migration
+			services.AddHostedService<TenantInitializerHostedService>();
 			services.AddHostedService<TenantMigrationHostedService>();
 
 

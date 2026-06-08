@@ -3,6 +3,7 @@ using Domain.Order.Enums;
 using Infrastructure.DataManagements;
 using Infrastructure.DataManagements.Abstractions.ORMs;
 using Infrastructure.DataManagements.DataModels;
+using Infrastructure.DataManagements.MultiTenancyServices.TenantRegistry;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -13,65 +14,25 @@ namespace Infrastructure.Services.BackgroundServices
 {
 	internal class ReportEventBackgroundService : BackgroundService
 	{
-		private readonly IServiceScopeFactory _serviceScopeFactory;
 		private readonly ORMToolsOptions _options;
+		private readonly ITenantRegistryService _tenantRegistryService;
 
-		public ReportEventBackgroundService(IServiceScopeFactory serviceScopeFactory,IOptions<ORMToolsOptions> options)
+		public ReportEventBackgroundService(IOptions<ORMToolsOptions> options, ITenantRegistryService tenantRegistryService)
 		{
-			_serviceScopeFactory = serviceScopeFactory ?? throw new ArgumentNullException(nameof(serviceScopeFactory));
 			_options = options.Value ?? throw new ArgumentNullException(nameof(options));
+			_tenantRegistryService = tenantRegistryService ?? throw new ArgumentNullException(nameof(tenantRegistryService));
 		}
 
 		protected async override Task ExecuteAsync(CancellationToken stoppingToken)
 		{
 			while (!stoppingToken.IsCancellationRequested)
 			{
-				/* 
-				 الان:
-
-var adminDb = _serviceScopeFactory
-    .CreateScope()
-    .ServiceProvider
-    .GetRequiredService<AdminEfCoreDbContext>();
-
-اینجا Scope ساخته شده ولی Dispose نشده.
-
-همین مشکل برای:
-
-var tenantDb = _serviceScopeFactory
-    .CreateScope()
-    .ServiceProvider
-    .GetRequiredService<TenantEfCoreDbContext>();
-
-هم وجود داره.
-
-بهتر:
-
-using var scope = _serviceScopeFactory.CreateScope();
-
-var adminDb =
-    scope.ServiceProvider
-        .GetRequiredService<AdminEfCoreDbContext>();
-
-و برای Tenant هم مشابه.
-				 */
-				using var  scope = _serviceScopeFactory.CreateScope();
-				var adminDb = scope.ServiceProvider.GetRequiredService<AdminEfCoreDbContext>();
-
-				var tenants = await adminDb.Customers
-					.AsNoTracking()
-					.Select(x => new
-					{
-						id = x.Id,
-						name = x.TenantName,
-						connectionString = x.ConnectionString	
-					}).ToListAsync(stoppingToken);
-				
+				var tenants = _tenantRegistryService.GetAll();
 
 				foreach (var tenant in tenants)
 				{
-					var connectionString = string.IsNullOrWhiteSpace(tenant.connectionString) ? 
-						string.Format(_options.EfCore.TenantConnectionString,tenant.name): tenant.connectionString;
+					var connectionString = string.IsNullOrWhiteSpace(tenant.ConnectionString) ? 
+						string.Format(_options.EfCore.TenantConnectionString,tenant.Name): tenant.ConnectionString;
 
 					var options = new DbContextOptionsBuilder<TenantEfCoreDbContext>()
 						.UseSqlServer(connectionString)
@@ -81,19 +42,17 @@ var adminDb =
 						new TenantEfCoreDbContext(options);
 
 					if(!tenantDb.Database.CanConnect())
-					{
-						// log can not connect to tenant database
 						continue;
-					}
+
+
+					if (!tenantDb.OrderEvents.Any(x => x.Processed == false))
+						continue;
 
 					var orderEvents = await tenantDb.OrderEvents
 						.Where(x => x.Processed == false)
 						.OrderBy(x => x.CreatedAt)
 						.Take(100)
 						.ToListAsync(stoppingToken);
-
-					if (!orderEvents.Any())
-						continue;
 
 					foreach (var orderEvent in orderEvents)
 					{
@@ -112,8 +71,7 @@ var adminDb =
 
 								try
 								{
-									reportModel = JsonSerializer.Deserialize<SingleOrderReportModel>(
-										orderEvent.Payload);
+									reportModel = JsonSerializer.Deserialize<SingleOrderReportModel>(orderEvent.Payload);
 								}
 								catch (JsonException ex)
 								{
@@ -135,8 +93,7 @@ var adminDb =
 														stoppingToken);
 
 												if (!exists)
-													await tenantDb.SingleOrderReports
-														.AddAsync(reportModel, stoppingToken);
+													await tenantDb.SingleOrderReports.AddAsync(reportModel, stoppingToken);
 											}
 											break;
 										default:

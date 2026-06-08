@@ -90,7 +90,7 @@ namespace Application.OrderManagement
 					SourceAccount = targetAccount.AccountNumber,
 					Amount = order.Specifics.Amount,
 					Description = order.Specifics.Description,
-					Status = Domain.Order.Enums.OrderStatus.Drafted,
+					Status = OrderStatus.Drafted,
 					TenantName = customer.TenantName,
 					OrderId = order.OrderId,
 				});
@@ -105,7 +105,7 @@ namespace Application.OrderManagement
 						SourceAccount = targetAccount.AccountNumber,
 						Amount = order.Specifics.Amount,
 						Description = order.Specifics.Description,
-						Status = Domain.Order.Enums.OrderStatus.Drafted,
+						Status = OrderStatus.Drafted,
 						TenantName = customer.TenantName,
 						OrderId = order.OrderId,
 					})

@@ -2,6 +2,7 @@
 using Infrastructure.DataManagements;
 using Infrastructure.DataManagements.Abstractions.ORMs;
 using Infrastructure.DataManagements.DataModels;
+using Infrastructure.DataManagements.MultiTenancyServices.TenantRegistry;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -12,12 +13,14 @@ namespace Infrastructure.Services.BackgroundServices
 	internal sealed class CustomerEventsBackgroundService : BackgroundService
 	{
 		private readonly IServiceScopeFactory _serviceScopeFactory;
+		private readonly ITenantRegistryService _tenantRegistryService;
 		private readonly ORMToolsOptions _options;
 
-		public CustomerEventsBackgroundService(IServiceScopeFactory serviceScopeFactory, IOptions<ORMToolsOptions> options)
+		public CustomerEventsBackgroundService(IServiceScopeFactory serviceScopeFactory, IOptions<ORMToolsOptions> options, ITenantRegistryService tenantRegistryService)
 		{
 			_serviceScopeFactory = serviceScopeFactory ?? throw new ArgumentNullException(nameof(serviceScopeFactory));
 			_options = options.Value ?? throw new ArgumentNullException(nameof(options));
+			_tenantRegistryService = tenantRegistryService ?? throw new ArgumentNullException(nameof(tenantRegistryService));
 		}
 		protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 		{
@@ -25,15 +28,12 @@ namespace Infrastructure.Services.BackgroundServices
 			{
 				using var scope = _serviceScopeFactory.CreateScope();
 
-				var options = new DbContextOptionsBuilder<AdminEfCoreDbContext>()
-					.UseSqlServer(_options.EfCore.BaseConnectionString)
-					.Options;
-
-				await using var adminDb =
-					new AdminEfCoreDbContext(options);
+				var adminDb =
+					scope.ServiceProvider
+						 .GetRequiredService<AdminEfCoreDbContext>();
 
 				var customerEvents = await adminDb.CustomerEvents
-					.Where(@event => @event.IsProccessed == false)
+					.Where(@event => @event.IsProccessed == false && @event.RetryCount < 5)
 					.ToListAsync(stoppingToken);
 
 				if (!customerEvents.Any())
@@ -45,23 +45,21 @@ namespace Infrastructure.Services.BackgroundServices
 					continue;
 				}
 
+				var registryNeedsRefresh = false;
+
+
 				foreach (var customerEvent in customerEvents)
 				{
-					if (customerEvent.RetryCount > 5)
-					{
-						customerEvent.IsProccessed = true;
-						customerEvent.Error = " 5 RetryCounts hit";
-						customerEvent.ProccessedAt = DateTimeOffset.UtcNow;
-						continue;
-					}
-
 					try
 					{
 						switch (customerEvent.Type)
 						{
 							case CustomerEventType.Create:
-								await HandleCreateCustomerEvent(customerEvent);
-								break;
+								{
+									await HandleCreateCustomerEvent(customerEvent,stoppingToken);
+									registryNeedsRefresh = true;
+									break;
+								}
 							case CustomerEventType.Update:
 								break;
 							case CustomerEventType.Delete:
@@ -76,19 +74,30 @@ namespace Infrastructure.Services.BackgroundServices
 					{
 						customerEvent.Error = ex.ToString();
 						customerEvent.RetryCount++;
+						if(customerEvent.RetryCount >= 5)
+						{
+							customerEvent.IsProccessed = true;
+							customerEvent.Error = " 5 RetryCounts hit";
+							customerEvent.ProccessedAt = DateTimeOffset.UtcNow;
+						}
 					}
 
 				}
 
 				await adminDb.SaveChangesAsync(stoppingToken);
+				if (registryNeedsRefresh)
+				{
+					await _tenantRegistryService.RefreshAsync();
+				}
 				await Task.Delay(TimeSpan.FromSeconds(120), stoppingToken);
 			}
 
 		}
 
 
-		private async Task HandleCreateCustomerEvent(CustomerEventModel customerEvent)
+		private async Task HandleCreateCustomerEvent(CustomerEventModel customerEvent , CancellationToken cancellationToken)
 		{
+
 			var connectionString = string.IsNullOrWhiteSpace(customerEvent.ConnectionString) ?
 									string.Format(_options.EfCore.TenantConnectionString, customerEvent.TenantName) : customerEvent.ConnectionString;
 
@@ -99,13 +108,9 @@ namespace Infrastructure.Services.BackgroundServices
 			await using var tenantDb =
 				new TenantEfCoreDbContext(options);
 
-			if (!tenantDb.Database.CanConnect())
-				await tenantDb.Database.MigrateAsync();
-			else
-				customerEvent.Error = "Tenant Database already migrated";
-
-				customerEvent.ProccessedAt = DateTimeOffset.UtcNow;
-				customerEvent.IsProccessed = true;
+			await tenantDb.Database.MigrateAsync(cancellationToken);
+			customerEvent.ProccessedAt = DateTimeOffset.UtcNow;
+			customerEvent.IsProccessed = true;
 		}
 	}
 }

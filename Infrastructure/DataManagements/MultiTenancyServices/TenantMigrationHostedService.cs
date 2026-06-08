@@ -1,5 +1,6 @@
 ﻿using Application.OrderManagement.Services;
 using Infrastructure.DataManagements.Abstractions.ORMs;
+using Infrastructure.DataManagements.MultiTenancyServices.TenantRegistry;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -10,13 +11,15 @@ namespace Infrastructure.DataManagements.MultiTenancyServices
 	internal class TenantMigrationHostedService : IHostedService
 	{
 		private readonly IServiceProvider _serviceProvider;
+		private readonly ITenantRegistryService tenantRegistryService;
 		private readonly ORMToolsOptions _options;
 
 
-		public TenantMigrationHostedService(IServiceProvider serviceProvider ,IOptions<ORMToolsOptions> options)
+		public TenantMigrationHostedService(IServiceProvider serviceProvider, IOptions<ORMToolsOptions> options, ITenantRegistryService tenantRegistryService)
 		{
-			_serviceProvider = serviceProvider;
+			_serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
 			_options = options.Value;
+			this.tenantRegistryService = tenantRegistryService ?? throw new ArgumentNullException(nameof(tenantRegistryService));
 		}
 
 		public async Task StartAsync(CancellationToken cancellationToken)
@@ -27,18 +30,15 @@ namespace Infrastructure.DataManagements.MultiTenancyServices
 				scope.ServiceProvider
 					.GetRequiredService<AdminEfCoreDbContext>();
 
-			var tenants = await adminDb.Customers
-				.AsNoTracking()
-				.ToListAsync(cancellationToken);
+			var tenants = tenantRegistryService.GetAll();
 
 			foreach (var tenant in tenants)
 			{
-				var builder =
-					new DbContextOptionsBuilder<TenantEfCoreDbContext>();
+				var builder = new DbContextOptionsBuilder<TenantEfCoreDbContext>();
 
 				var connectionString = string.IsNullOrWhiteSpace(tenant.ConnectionString)
 				? string.Format(_options.EfCore.TenantConnectionString,
-					tenant.TenantName)
+					tenant.Name)
 				: tenant.ConnectionString;
 
 				builder.UseSqlServer(connectionString, sqlOptions =>
@@ -50,16 +50,15 @@ namespace Infrastructure.DataManagements.MultiTenancyServices
 						errorNumbersToAdd: null);
 				});
 
-				await using var tenantDb =
-					new TenantEfCoreDbContext(builder.Options);
+				await using var tenantDb = new TenantEfCoreDbContext(builder.Options);
 
 				if (!tenantDb.Database.CanConnect())
 				{
 					await tenantDb.Database.MigrateAsync(cancellationToken);
-					Console.WriteLine($"{tenant.TenantName} : Migrated");
+					Console.WriteLine($"{tenant.Name} : Migrated");
 				}
 				else
-					Console.WriteLine($"{tenant.TenantName} : Alredy Exists");
+					Console.WriteLine($"{tenant.Name} : Alredy Exists");
 			}
 		}
 
