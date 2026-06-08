@@ -52,13 +52,8 @@ namespace Infrastructure.DataManagements.MultiTenancyServices
 
 				await using var tenantDb = new TenantEfCoreDbContext(builder.Options);
 
-				if (!tenantDb.Database.CanConnect())
-				{
-					await tenantDb.Database.MigrateAsync(cancellationToken);
-					Console.WriteLine($"{tenant.Name} : Migrated");
-				}
-				else
-					Console.WriteLine($"{tenant.Name} : Alredy Exists");
+				await tenantDb.Database.MigrateAsync(cancellationToken);
+				Console.WriteLine($"{tenant.Name} Migrated");
 			}
 		}
 

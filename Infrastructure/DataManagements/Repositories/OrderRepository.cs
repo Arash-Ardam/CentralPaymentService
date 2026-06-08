@@ -46,9 +46,7 @@ namespace Infrastructure.DataManagements.Repositories
 				.FirstOrDefaultAsync(ord => ord.OrderId == orderId);
 		}
 
-		public async Task UpdateAsync(Order order)
-		{
-			_dbContext.Update(order);
-		}
+		public async Task UpdateAsync(Order order) => _dbContext.Orders.Update(order);
+
 	}
 }

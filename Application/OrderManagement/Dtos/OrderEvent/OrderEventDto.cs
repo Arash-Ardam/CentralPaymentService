@@ -11,6 +11,8 @@ namespace Application.OrderManagement.Dtos.OrderEvent
 
 		public PaymentType PaymentType { get; set; }
 
+		public OrderStatus Status { get; set; }
+
 		public string Payload { get; set; }
 
 		public DateTimeOffset CreatedAt { get; private set; }

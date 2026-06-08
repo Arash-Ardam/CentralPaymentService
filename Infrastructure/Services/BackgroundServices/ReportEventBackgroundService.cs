@@ -67,54 +67,45 @@ namespace Infrastructure.Services.BackgroundServices
 
 							if (orderEvent.PaymentType == PaymentType.Single)
 							{
-								SingleOrderReportModel? reportModel;
-
-								try
+								switch (orderEvent.EventType)
 								{
-									reportModel = JsonSerializer.Deserialize<SingleOrderReportModel>(orderEvent.Payload);
-								}
-								catch (JsonException ex)
-								{
-									orderEvent.Error = ex.ToString();
-									orderEvent.RetryCount++;
-									continue;
-								}
-
-								if (reportModel != null)
-								{
-									switch (orderEvent.EventType)
-									{
-										case OrderEventType.Create:
+									case OrderEventType.Create:
+										{
+											try
 											{
+												var reportModel = JsonSerializer.Deserialize<SingleOrderReportModel>(orderEvent.Payload);
 												var exists =
 												await tenantDb.SingleOrderReports
 													.AnyAsync(
-														x => x.OrderId == reportModel.OrderId,
+														x => x.OrderId == orderEvent.OrderId,
 														stoppingToken);
 
 												if (!exists)
 													await tenantDb.SingleOrderReports.AddAsync(reportModel, stoppingToken);
 											}
-											break;
-										default:
+											catch (Exception ex)
 											{
-												var tenantReport = await tenantDb.SingleOrderReports.FirstOrDefaultAsync(report => report.OrderId == orderEvent.OrderId);
-												if (tenantReport != null)
-												{
-													tenantReport.OrderId = reportModel.OrderId;
-													tenantReport.TenantName = reportModel.TenantName;
-													tenantReport.OwnerFullName = reportModel.OwnerFullName;
-													tenantReport.SourceAccount = reportModel.SourceAccount;
-													tenantReport.Amount = reportModel.Amount;
-													tenantReport.Description = reportModel.Description;
-													tenantReport.DepositFullName = reportModel.DepositFullName;
-													tenantReport.DepositAccount = reportModel.DepositAccount;
-													tenantReport.Status = reportModel.Status;
-												}	
+												orderEvent.Error = ex.ToString();
+												orderEvent.RetryCount++;
+												continue;
 											}
 											break;
-									}								
-								}
+										}
+									case OrderEventType.AddSpecs or OrderEventType.Submit or OrderEventType.SentToBank or OrderEventType.Inquiry:
+										{
+											var exists =
+											await tenantDb.SingleOrderReports
+												.AnyAsync(
+													x => x.OrderId == orderEvent.OrderId,
+													stoppingToken);
+
+												var tenantReport = await tenantDb.SingleOrderReports.SingleAsync(report => report.OrderId == orderEvent.OrderId);
+												tenantReport.Status = orderEvent.Status;
+											break;
+										}
+									default:
+										break;
+								}								
 							}
 							// TODO: PaymentType.Grouped flow
 

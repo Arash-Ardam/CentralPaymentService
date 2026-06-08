@@ -2,6 +2,7 @@
 using Application.Abstractions.Services;
 using Application.OrderManagement.Dtos.OrderEvent;
 using Application.OrderManagement.Dtos.SingleOrder;
+using Application.OrderManagement.Enums;
 using Application.OrderManagement.Mappings;
 using Application.OrderManagement.Services;
 using Domain.Banking.Account;
@@ -84,33 +85,8 @@ namespace Application.OrderManagement
 
 				var order = OrderFactory.CreateSingle(targetAccount.Id, orderDto.Amount, orderDto.Description);
 				var result = await _orderRepository.CreateAsync(order);
-				var payload = JsonSerializer.Serialize(new SingleOrderReportDto
-				{
-					OwnerFullName = $"{customer.Info.FirstName} {customer.Info.LastName}",
-					SourceAccount = targetAccount.AccountNumber,
-					Amount = order.Specifics.Amount,
-					Description = order.Specifics.Description,
-					Status = OrderStatus.Drafted,
-					TenantName = customer.TenantName,
-					OrderId = order.OrderId,
-				});
-				await _orderEventService.AddAsync(new OrderEventDto
-				{
-					OrderId =order.OrderId,
-					PaymentType = PaymentType.Single,
-					EventType = Enums.OrderEventType.Create,
-					Payload = JsonSerializer.Serialize(new SingleOrderReportDto
-					{
-						OwnerFullName = $"{customer.Info.FirstName} {customer.Info.LastName}",
-						SourceAccount = targetAccount.AccountNumber,
-						Amount = order.Specifics.Amount,
-						Description = order.Specifics.Description,
-						Status = OrderStatus.Drafted,
-						TenantName = customer.TenantName,
-						OrderId = order.OrderId,
-					})
-				});
 
+				await PublishEvent(customer, targetAccount, order);
 				await _unitOfWork.SaveTenantChangesAsync();
 
 				response.Data = result.Id;
@@ -156,24 +132,7 @@ namespace Application.OrderManagement
 				targerOrder.AddSingleTransaction(transaction);
 
 				await _orderRepository.UpdateAsync(targerOrder);
-
-
-				var oldEvent = await _orderEventService.FindAsync(targerOrder.OrderId);
-				if(oldEvent is not null)
-				{
-					var reportDto = JsonSerializer.Deserialize<SingleOrderReportDto>(oldEvent.Payload);
-					reportDto.DepositFullName = $"{targerOrder.SingleTransaction.Specs.FirstName} {targerOrder.SingleTransaction.Specs.LastName}";
-					reportDto.DepositAccount = targerOrder.SingleTransaction.Specs.AccountNumber;
-					reportDto.Status = OrderStatus.Drafted;
-
-					await _orderEventService.AddAsync(new OrderEventDto
-					{
-						OrderId = targerOrder.OrderId,
-						PaymentType = PaymentType.Single,
-						EventType = Enums.OrderEventType.AddSpecs,
-						Payload = JsonSerializer.Serialize(reportDto)
-					});
-				}
+				await PublishEvent(targerOrder, OrderStatus.Drafted, OrderEventType.AddSpecs);
 
 				await _unitOfWork.SaveTenantChangesAsync();
 
@@ -208,23 +167,8 @@ namespace Application.OrderManagement
 
 				targerOrder.RemoveSingleTransaction();
 				await _orderRepository.UpdateAsync(targerOrder);
+				await PublishEvent(targerOrder, OrderStatus.Drafted, OrderEventType.AddSpecs);
 
-				var oldEvent = await _orderEventService.FindAsync(targerOrder.OrderId);
-				if (oldEvent is not null)
-				{
-					var reportDto = JsonSerializer.Deserialize<SingleOrderReportDto>(oldEvent.Payload);
-					reportDto.DepositFullName =string.Empty;
-					reportDto.DepositAccount = string.Empty;
-					reportDto.Status = OrderStatus.Drafted;
-
-					await _orderEventService.AddAsync(new OrderEventDto
-					{
-						OrderId = targerOrder.OrderId,
-						PaymentType = PaymentType.Single,
-						EventType = Enums.OrderEventType.AddSpecs,
-						Payload = JsonSerializer.Serialize(reportDto)
-					});
-				}
 
 				await _unitOfWork.SaveTenantChangesAsync();
 
@@ -256,27 +200,10 @@ namespace Application.OrderManagement
 				}
 
 				targerOrder.FinalizeSingleOrder();
+
 				await _orderRepository.UpdateAsync(targerOrder);
-
-
-				var oldEvent = await _orderEventService.FindAsync(targerOrder.OrderId);
-				if (oldEvent is not null)
-				{
-					var reportDto = JsonSerializer.Deserialize<SingleOrderReportDto>(oldEvent.Payload);
-					reportDto.DepositFullName = $"{targerOrder.SingleTransaction.Specs.FirstName} {targerOrder.SingleTransaction.Specs.LastName}";
-					reportDto.DepositAccount = targerOrder.SingleTransaction.Specs.AccountNumber;
-					reportDto.Status = OrderStatus.Submited;
-
-					await _orderEventService.AddAsync(new OrderEventDto
-					{
-						OrderId = targerOrder.OrderId,
-						PaymentType = PaymentType.Single,
-						EventType = Enums.OrderEventType.Submit,
-						Payload = JsonSerializer.Serialize(reportDto)
-					});
-				}
-
-
+				await PublishEvent(targerOrder, OrderStatus.Submited, OrderEventType.Submit);
+								
 				await _unitOfWork.SaveTenantChangesAsync();
 
 				response.Message = "order finalized and ready to proccess";
@@ -331,6 +258,9 @@ namespace Application.OrderManagement
 					order.MarkSingleRequestStatus(providerResponse.Data.Status, providerResponse.Message);
 
 				await _orderRepository.UpdateAsync(order);
+				await PublishEvent(order, OrderStatus.Pending, OrderEventType.SentToBank);
+
+				await _unitOfWork.SaveTenantChangesAsync();
 
 				applicationResponse.IsSuccess = providerResponse.IsSuccess;
 				applicationResponse.Status = ApplicationResultStatus.Accepted;
@@ -383,6 +313,9 @@ namespace Application.OrderManagement
 					await _orderRepository.UpdateAsync(order);
 				}
 
+				await PublishEvent(order, order.Specifics.Status, OrderEventType.Inquiry);
+				await _unitOfWork.SaveTenantChangesAsync();
+
 				applicationResponse.IsSuccess = response.IsSuccess;
 				applicationResponse.Status = ApplicationResultStatus.Accepted;
 				applicationResponse.Message = response.Message;
@@ -426,6 +359,55 @@ namespace Application.OrderManagement
 			}
 		}
 
+		private async Task PublishEvent(Order targerOrder,OrderStatus status,OrderEventType type)
+		{
+			var oldEvent = await _orderEventService.FindAsync(targerOrder.OrderId);
+			if (oldEvent is not null)
+			{
+				var reportDto = JsonSerializer.Deserialize<SingleOrderReportDto>(oldEvent.Payload);
+				reportDto.DepositFullName = $"{targerOrder.SingleTransaction.Specs.FirstName} {targerOrder.SingleTransaction.Specs.LastName}";
+				reportDto.DepositAccount = targerOrder.SingleTransaction.Specs.AccountNumber;
+				reportDto.Status = OrderStatus.Submited;
+
+				await _orderEventService.AddAsync(new OrderEventDto
+				{
+					OrderId = targerOrder.OrderId,
+					PaymentType = PaymentType.Single,
+					EventType = OrderEventType.Submit,
+					Status = status,
+				});
+			}
+		}
+
+		private async Task PublishEvent(Customer customer, Account account, Order order)
+		{
+			var payload = JsonSerializer.Serialize(new SingleOrderReportDto
+			{
+				OwnerFullName = $"{customer.Info.FirstName} {customer.Info.LastName}",
+				SourceAccount = account.AccountNumber,
+				Amount = order.Specifics.Amount,
+				Description = order.Specifics.Description,
+				Status = OrderStatus.Drafted,
+				TenantName = customer.TenantName,
+				OrderId = order.OrderId,
+			});
+			await _orderEventService.AddAsync(new OrderEventDto
+			{
+				OrderId = order.OrderId,
+				PaymentType = PaymentType.Single,
+				EventType = Enums.OrderEventType.Create,
+				Payload = JsonSerializer.Serialize(new SingleOrderReportDto
+				{
+					OwnerFullName = $"{customer.Info.FirstName} {customer.Info.LastName}",
+					SourceAccount = account.AccountNumber,
+					Amount = order.Specifics.Amount,
+					Description = order.Specifics.Description,
+					Status = OrderStatus.Drafted,
+					TenantName = customer.TenantName,
+					OrderId = order.OrderId,
+				})
+			});
+		}
 		private async Task<ApplicationResponse<(Order order, Bank bank, Account account, Customer customer)>> LoadOrderRequiredContexts(Guid orderId)
 		{
 			var targetOrder = await _orderRepository.GetAsync(orderId);
