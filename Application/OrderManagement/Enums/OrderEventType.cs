@@ -6,6 +6,8 @@
 		AddSpecs = 2,
 		Submit = 3,
 		SentToBank = 4,
-		Inquiry=5
+		Inquiry=5,
+		AddTransactions = 6,
+		RemoveTransaction = 7
 	}
 }

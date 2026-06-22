@@ -16,7 +16,7 @@ namespace Domain.Banking.Account.Factories
 
 		public BatchPaymentSettingsFactory WithMaxTransactions(int value)
 		{
-			_maxDailyAmount = value;
+			_maxTrasactionsCount = value;
 			return this;
 		}
 

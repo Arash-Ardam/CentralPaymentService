@@ -14,13 +14,17 @@ namespace Infrastructure.DataManagements.Abstractions.ORMs
 		public DbSet<Order> Orders => Set<Order>();
 		public DbSet<OrderEventModel> OrderEvents => Set<OrderEventModel>();
 		public DbSet<SingleOrderReportModel> SingleOrderReports => Set<SingleOrderReportModel>();
+		public DbSet<GroupedOrderReportModel> GroupedOrderReports => Set<GroupedOrderReportModel>();
+		public DbSet<GroupedOrderTransactionReportModel> GroupedTransactionsReports => Set<GroupedOrderTransactionReportModel>();
 		protected override void OnModelCreating(ModelBuilder modelBuilder)
 		{
 			modelBuilder.ApplyConfiguration(new GroupedTransactionConfiguration());
 			modelBuilder.ApplyConfiguration(new SingleTransactionConfiguration());
 			modelBuilder.ApplyConfiguration(new OrderDataConfiguration());
 			modelBuilder.ApplyConfiguration(new OrderEventsConfiguration());
-			modelBuilder.ApplyConfiguration(new OrderReportConfiguration());
+			modelBuilder.ApplyConfiguration(new SingleOrderReportConfiguration());
+			modelBuilder.ApplyConfiguration(new GroupedOrderReportConfiguration());
+			modelBuilder.ApplyConfiguration(new GroupedOrderTranactionsReportConfiguration());
 
 			base.OnModelCreating(modelBuilder);
 		}

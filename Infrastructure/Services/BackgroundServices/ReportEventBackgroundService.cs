@@ -1,13 +1,14 @@
 ﻿using Application.OrderManagement.Enums;
+using Domain.Order;
 using Domain.Order.Enums;
 using Infrastructure.DataManagements;
 using Infrastructure.DataManagements.Abstractions.ORMs;
 using Infrastructure.DataManagements.DataModels;
 using Infrastructure.DataManagements.MultiTenancyServices.TenantRegistry;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Abstractions;
 using System.Text.Json;
 
 namespace Infrastructure.Services.BackgroundServices
@@ -16,6 +17,9 @@ namespace Infrastructure.Services.BackgroundServices
 	{
 		private readonly ORMToolsOptions _options;
 		private readonly ITenantRegistryService _tenantRegistryService;
+		private Dictionary<string, GroupedOrderReportModel> _groupedOrderReports = new();
+		private Dictionary<string, SingleOrderReportModel> _singleOrderReports = new();
+		private Dictionary<string, Order> _orders = new();
 
 		public ReportEventBackgroundService(IOptions<ORMToolsOptions> options, ITenantRegistryService tenantRegistryService)
 		{
@@ -31,8 +35,8 @@ namespace Infrastructure.Services.BackgroundServices
 
 				foreach (var tenant in tenants)
 				{
-					var connectionString = string.IsNullOrWhiteSpace(tenant.ConnectionString) ? 
-						string.Format(_options.EfCore.TenantConnectionString,tenant.Name): tenant.ConnectionString;
+					var connectionString = string.IsNullOrWhiteSpace(tenant.ConnectionString) ?
+						string.Format(_options.EfCore.TenantConnectionString, tenant.Name) : tenant.ConnectionString;
 
 					var options = new DbContextOptionsBuilder<TenantEfCoreDbContext>()
 						.UseSqlServer(connectionString)
@@ -40,10 +44,6 @@ namespace Infrastructure.Services.BackgroundServices
 
 					await using var tenantDb =
 						new TenantEfCoreDbContext(options);
-
-					if(!tenantDb.Database.CanConnect())
-						continue;
-
 
 					if (!tenantDb.OrderEvents.Any(x => x.Processed == false))
 						continue;
@@ -53,6 +53,27 @@ namespace Infrastructure.Services.BackgroundServices
 						.OrderBy(x => x.CreatedAt)
 						.Take(100)
 						.ToListAsync(stoppingToken);
+
+					var orderIds =
+						orderEvents.Select(x => x.OrderId)
+						.Distinct()
+						.ToList();
+
+					_groupedOrderReports =
+						await tenantDb.GroupedOrderReports
+							.Include(rep => rep.Transactions)
+							.Where(x => orderIds.Contains(x.OrderId))
+							.ToDictionaryAsync(x => x.OrderId, stoppingToken);
+
+					_singleOrderReports =
+						await tenantDb.SingleOrderReports
+							.Where(x => orderIds.Contains(x.OrderId))
+							.ToDictionaryAsync(x => x.OrderId, stoppingToken);
+
+					_orders =
+						await tenantDb.Orders
+							.Where(x => orderIds.Contains(x.OrderId))
+							.ToDictionaryAsync(x => x.OrderId, stoppingToken);
 
 					foreach (var orderEvent in orderEvents)
 					{
@@ -65,49 +86,19 @@ namespace Infrastructure.Services.BackgroundServices
 								continue;
 							}
 
+
 							if (orderEvent.PaymentType == PaymentType.Single)
 							{
-								switch (orderEvent.EventType)
-								{
-									case OrderEventType.Create:
-										{
-											try
-											{
-												var reportModel = JsonSerializer.Deserialize<SingleOrderReportModel>(orderEvent.Payload);
-												var exists =
-												await tenantDb.SingleOrderReports
-													.AnyAsync(
-														x => x.OrderId == orderEvent.OrderId,
-														stoppingToken);
-
-												if (!exists)
-													await tenantDb.SingleOrderReports.AddAsync(reportModel, stoppingToken);
-											}
-											catch (Exception ex)
-											{
-												orderEvent.Error = ex.ToString();
-												orderEvent.RetryCount++;
-												continue;
-											}
-											break;
-										}
-									case OrderEventType.AddSpecs or OrderEventType.Submit or OrderEventType.SentToBank or OrderEventType.Inquiry:
-										{
-											var exists =
-											await tenantDb.SingleOrderReports
-												.AnyAsync(
-													x => x.OrderId == orderEvent.OrderId,
-													stoppingToken);
-
-												var tenantReport = await tenantDb.SingleOrderReports.SingleAsync(report => report.OrderId == orderEvent.OrderId);
-												tenantReport.Status = orderEvent.Status;
-											break;
-										}
-									default:
-										break;
-								}								
+								_singleOrderReports.TryGetValue(orderEvent.OrderId, out var singleReport);
+								await HandleSingleOrderEvents(orderEvent, tenantDb, singleReport, stoppingToken);
 							}
-							// TODO: PaymentType.Grouped flow
+
+							if (orderEvent.PaymentType == PaymentType.Grouped)
+							{
+								_groupedOrderReports.TryGetValue(orderEvent.OrderId, out var groupedReport);
+								_orders.TryGetValue(orderEvent.OrderId, out var order);
+								await HandleGroupedOrderEvents(orderEvent, tenantDb, order, groupedReport, stoppingToken);
+							}
 
 							// mark event as proccessed
 							orderEvent.Processed = true;
@@ -119,7 +110,7 @@ namespace Infrastructure.Services.BackgroundServices
 						{
 							orderEvent.Processed = false;
 							orderEvent.RetryCount++;
-							orderEvent.Error = ex.ToString();
+							orderEvent.Error = $"{ex.Message} : {ex.InnerException?.Message}".Trim();
 						}
 					}
 
@@ -130,5 +121,120 @@ namespace Infrastructure.Services.BackgroundServices
 				await Task.Delay(TimeSpan.FromSeconds(60), stoppingToken);
 			}
 		}
+
+
+		private async Task HandleSingleOrderEvents(OrderEventModel orderEvent, TenantEfCoreDbContext tenantDb, SingleOrderReportModel report, CancellationToken stoppingToken)
+		{
+			switch (orderEvent.EventType)
+			{
+				case OrderEventType.Create:
+					{
+						var reportModel = JsonSerializer.Deserialize<SingleOrderReportModel>(orderEvent.Payload);
+						if (reportModel is null)
+							throw new InvalidOperationException(
+								"Payload deserialization failed");
+
+						if (report is null)
+						{
+							await tenantDb.SingleOrderReports.AddAsync(reportModel, stoppingToken);
+							_singleOrderReports.Add(reportModel.OrderId, reportModel);
+						}
+						break;
+					}
+				case OrderEventType.AddSpecs or OrderEventType.Submit or OrderEventType.SentToBank or OrderEventType.Inquiry:
+					{
+						if (report is not null)
+							report.Status = orderEvent.Status;
+						else
+							throw new ArgumentException("order id is invalid");
+						break;
+					}
+				default:
+					break;
+			}
+		}
+
+
+		private async Task HandleGroupedOrderEvents(OrderEventModel orderEvent, TenantEfCoreDbContext tenantDb, Order order, GroupedOrderReportModel report, CancellationToken stoppingToken)
+		{
+			switch (orderEvent.EventType)
+			{
+				case OrderEventType.Create:
+					var reportModel = JsonSerializer.Deserialize<GroupedOrderReportModel>(orderEvent.Payload);
+					if (reportModel is null)
+						throw new InvalidOperationException(
+							"Payload deserialization failed");
+
+					if (report is null)
+					{
+						await tenantDb.GroupedOrderReports.AddAsync(reportModel, stoppingToken);
+						_groupedOrderReports.Add(reportModel.OrderId, reportModel);
+					}
+					break;
+
+				case OrderEventType.Submit:
+					if (report is not null)
+					{
+						report.Status = orderEvent.Status;
+						foreach (var transaction in report.Transactions)
+						{
+							transaction.Status = GroupedTransactionStatus.Pending;
+						}
+					}
+					break;
+
+				case OrderEventType.SentToBank or OrderEventType.Inquiry:
+					if (report is not null)
+					{
+						var trxMap = order.GroupedTransactions.ToDictionary(x => x.Specs.PaymentId);
+						foreach (var item in report.Transactions)
+						{
+							if (trxMap.TryGetValue(item.OrderId, out var trx))
+								item.Status = trx.Status;
+						}
+					}
+						
+					break;
+
+				case OrderEventType.AddTransactions:
+					if (report is not null)
+					{
+						var existingIds =
+						report.Transactions
+							.Select(x => x.OrderId)
+							.ToHashSet();
+
+						report.Transactions.AddRange(order.GroupedTransactions
+							.Where(x => !existingIds.Contains(x.Specs.PaymentId))
+							.Select(trx => 
+							new GroupedOrderTransactionReportModel
+							{
+								OrderId = trx.Specs.PaymentId,
+								TenantName = report.TenantName,
+								Status = trx.Status,
+								Iban = trx.Specs.Iban,
+								Description = trx.Specs.Description,
+								Amount = trx.Specs.Amount,
+								FullName = $"{trx.Specs.FirstName} {trx.Specs.LastName}".Trim(),
+								TrackingCode = trx.TrackingId,
+								WithdrawalOrderId = report.OrderId
+							})
+							.ToList());
+					}
+					else
+						throw new ArgumentException("order id is invalid");
+					break;
+				case OrderEventType.RemoveTransaction:
+					if(report is not null && order is not null)
+					{
+						var transaction = order.GetGroupedTrasaction(Guid.Parse(orderEvent.Payload));
+						report.Transactions.Remove(report.Transactions.Single(trx => trx.OrderId == transaction.Specs.PaymentId));
+					}
+					break;
+				default:
+					break;
+			}
+		}
 	}
 }
+

@@ -4,6 +4,7 @@ using Application.Accounting.AccountApp.Services;
 using AutoMapper;
 using Domain.Banking.Account;
 using Domain.Banking.Bank;
+using Domain.Banking.Bank.Enums;
 using Domain.Customer;
 
 namespace Application.Accounting.AccountApp;
@@ -124,6 +125,23 @@ internal class AccountApplication : IAccountApplication
 				return response;
 			}
 
+			var targetBank = await _bankRepository.GetAsync(targetAccount.BankId);
+			if (targetBank is null)
+			{
+				response.IsSuccess = false;
+				response.Status = ApplicationResultStatus.ValidationError;
+				response.Message = "given target bank not exists";
+				return response;
+			}
+
+			if (!targetBank.ServiceTypes.Contains(ServiceTypes.Single))
+			{
+				response.IsSuccess = false;
+				response.Status = ApplicationResultStatus.ValidationError;
+				response.Message = "given target bank does not support single payments";
+				return response;
+			}
+
 			var settingFactory = AccountFactory.GetSinglePaymentSettingsFactory();
 
 			if (!string.IsNullOrWhiteSpace(settingsDto.TerminalId))
@@ -215,6 +233,23 @@ internal class AccountApplication : IAccountApplication
 				response.IsSuccess = false;
 				response.Status = ApplicationResultStatus.ValidationError;
 				response.Message = "given target account not exists";
+				return response;
+			}
+
+			var targetBank = await _bankRepository.GetAsync(targetAccount.BankId);
+			if (targetBank is null)
+			{
+				response.IsSuccess = false;
+				response.Status = ApplicationResultStatus.ValidationError;
+				response.Message = "given target bank not exists";
+				return response;
+			}
+
+			if (!targetBank.ServiceTypes.Contains(ServiceTypes.Grouped))
+			{
+				response.IsSuccess = false;
+				response.Status = ApplicationResultStatus.ValidationError;
+				response.Message = "given target bank does not support grouped payments";
 				return response;
 			}
 

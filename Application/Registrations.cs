@@ -22,6 +22,7 @@ namespace Application
 			services.AddScoped<IAccountApplication, AccountApplication>();
 
 			services.AddScoped<ISingleOrderApplication, SingleOrderApplication>();
+			services.AddScoped<IGroupedOrderApplication, GroupedOrderApplication>();
 			services.AddScoped<IPaymentServicesFactory,PaymentServicesFactory>();
 			services.AddScoped<IPaymentPolicyService, PaymentPolicyService>();
 

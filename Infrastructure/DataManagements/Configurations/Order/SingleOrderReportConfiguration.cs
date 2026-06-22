@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Infrastructure.DataManagements.Configurations.Order
 {
-	internal class OrderReportConfiguration : IEntityTypeConfiguration<SingleOrderReportModel>
+	internal class SingleOrderReportConfiguration : IEntityTypeConfiguration<SingleOrderReportModel>
 	{
 		public void Configure(EntityTypeBuilder<SingleOrderReportModel> builder)
 		{
