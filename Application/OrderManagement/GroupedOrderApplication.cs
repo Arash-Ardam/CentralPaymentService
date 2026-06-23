@@ -177,10 +177,12 @@ internal class GroupedOrderApplication : IGroupedOrderApplication
 				response.Status = ApplicationResultStatus.NotFound;
 			}
 
+			var paymentId = targetOrder.GetGroupedTrasaction(transactionId).Specs.PaymentId;
+
 			targetOrder.RemoveGroupedTransaction(transactionId);
 
 			await _orderRepository.UpdateAsync(targetOrder);
-			await PublishEvent(targetOrder, targetOrder.Specifics.Status, OrderEventType.AddTransactions, transactionId.ToString());
+			await PublishEvent(targetOrder, targetOrder.Specifics.Status, OrderEventType.RemoveTransaction, paymentId);
 
 			await _unitOfWork.SaveTenantChangesAsync();
 
@@ -248,6 +250,7 @@ internal class GroupedOrderApplication : IGroupedOrderApplication
 		{
 			response.IsSuccess = false;
 			response.Message = ex.Message;
+			response.Status = ApplicationResultStatus.Exception;
 			return response;
 		}
 	}

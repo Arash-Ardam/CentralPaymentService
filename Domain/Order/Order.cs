@@ -68,7 +68,7 @@ public class Order
 		long toSubmitCount = transactions.Count();
 
 		long totalSubmittedAmount = GroupedTransactions.Sum(trx => trx.Specs.Amount);
-		long totalSubmittedTransactions = transactions.Sum(trx => trx.Specs.Amount);
+		long totalSubmittedTransactionsAmount = transactions.Sum(trx => trx.Specs.Amount);
 
 		if (submittedCount + toSubmitCount > Specifics.NumberOfTransactions)
 			throw new ArgumentException($"Order hits max transactions row = {Specifics.NumberOfTransactions} , entry count ={toSubmitCount} ,already row numbers = {submittedCount}");
@@ -76,13 +76,13 @@ public class Order
 
 		else if (submittedCount + toSubmitCount < Specifics.NumberOfTransactions)
 		{
-			if (totalSubmittedAmount + totalSubmittedTransactions >= Specifics.Amount)
-				throw new ArgumentException($"Order in less transactions count hits Amount : total = {Specifics.Amount} , entry ={totalSubmittedTransactions} ,existed= {totalSubmittedAmount}");
+			if (totalSubmittedAmount + totalSubmittedTransactionsAmount >= Specifics.Amount)
+				throw new ArgumentException($"Order in less transactions count hits Amount : total = {Specifics.Amount} , entry ={totalSubmittedTransactionsAmount} ,existed= {totalSubmittedAmount}");
 		}
 		else
 		{
-			if (totalSubmittedAmount + totalSubmittedTransactions < Specifics.Amount)
-				throw new ArgumentException($"target submitted amount : {totalSubmittedAmount + totalSubmittedTransactions} is not fill Order amount : {Specifics.Amount}");
+			if (totalSubmittedAmount + totalSubmittedTransactionsAmount != Specifics.Amount)
+				throw new ArgumentException($"target submitted amount : {totalSubmittedAmount + totalSubmittedTransactionsAmount} is not fill Order amount : {Specifics.Amount}");
 		}
 
 		GroupedTransactions.AddRange(transactions);

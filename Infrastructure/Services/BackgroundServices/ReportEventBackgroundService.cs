@@ -72,6 +72,8 @@ namespace Infrastructure.Services.BackgroundServices
 
 					_orders =
 						await tenantDb.Orders
+							.Include(x => x.GroupedTransactions)
+							.Include(x => x.SingleTransaction)
 							.Where(x => orderIds.Contains(x.OrderId))
 							.ToDictionaryAsync(x => x.OrderId, stoppingToken);
 
@@ -226,10 +228,7 @@ namespace Infrastructure.Services.BackgroundServices
 					break;
 				case OrderEventType.RemoveTransaction:
 					if(report is not null && order is not null)
-					{
-						var transaction = order.GetGroupedTrasaction(Guid.Parse(orderEvent.Payload));
-						report.Transactions.Remove(report.Transactions.Single(trx => trx.OrderId == transaction.Specs.PaymentId));
-					}
+						report.Transactions.Remove(report.Transactions.Single(trx => trx.OrderId == orderEvent.Payload));
 					break;
 				default:
 					break;

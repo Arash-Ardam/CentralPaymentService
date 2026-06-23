@@ -15,7 +15,7 @@ namespace Domain.Order.Builders
 		private string AccountNumber = string.Empty;
 		private string Iban;
 		private string NationalCode;
-		private int PaymentId = Random.Shared.Next(1000000000, 999999999);
+		private int PaymentId;
 		private TransactionType TransactionType;
 
 
@@ -96,7 +96,7 @@ namespace Domain.Order.Builders
 			transactionSpecs.AccountNumber = this.AccountNumber;
 			transactionSpecs.Iban = this.Iban;
 			transactionSpecs.NationalId = this.NationalCode;
-			transactionSpecs.PaymentId = this.PaymentId.ToString();
+			transactionSpecs.PaymentId = Random.Shared.Next(100000000, 999999999).ToString();
 
 			transactionSpecs.TransactionType = this.TransactionType;
 
