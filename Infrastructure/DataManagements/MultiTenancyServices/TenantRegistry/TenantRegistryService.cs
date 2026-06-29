@@ -35,5 +35,7 @@ namespace Infrastructure.DataManagements.MultiTenancyServices.TenantRegistry
 					ConnectionString = x.ConnectionString
 				}).ToListAsync();
 		}
+
+		public TenantInfoDto? Find(Guid id) => _tenants.Find(x => x.Id == id);
 	}
 }

@@ -1,4 +1,5 @@
 ﻿using Application.Accounting.CustomerApp.Enums;
+using Application.OrderManagement.Enums;
 using Infrastructure.DataManagements;
 using Infrastructure.DataManagements.Abstractions.ORMs;
 using Infrastructure.DataManagements.DataModels;
@@ -32,8 +33,8 @@ namespace Infrastructure.Services.BackgroundServices
 					scope.ServiceProvider
 						 .GetRequiredService<AdminEfCoreDbContext>();
 
-				var customerEvents = await adminDb.CustomerEvents
-					.Where(@event => @event.IsProccessed == false && @event.RetryCount < 5)
+				var customerEvents = await adminDb.OutboxMessages
+					.Where(@event => @event.Processed == false && @event.Type == OutBoxType.Customer && @event.RetryCount < 5)
 					.ToListAsync(stoppingToken);
 
 				if (!customerEvents.Any())
@@ -52,19 +53,19 @@ namespace Infrastructure.Services.BackgroundServices
 				{
 					try
 					{
-						switch (customerEvent.Type)
+						switch (customerEvent.BehaviorType)
 						{
-							case CustomerEventType.Create:
+							case OutboxBehaviorType.Create:
 								{
 									await HandleCreateCustomerEvent(customerEvent,stoppingToken);
 									registryNeedsRefresh = true;
 									break;
 								}
-							case CustomerEventType.Update:
+							case OutboxBehaviorType.Update:
 								break;
-							case CustomerEventType.Delete:
+							case OutboxBehaviorType.Delete:
 								break;
-							case CustomerEventType.DeleteAll:
+							case OutboxBehaviorType.DeleteAll:
 								break;
 							default:
 								break;
@@ -76,9 +77,9 @@ namespace Infrastructure.Services.BackgroundServices
 						customerEvent.RetryCount++;
 						if(customerEvent.RetryCount >= 5)
 						{
-							customerEvent.IsProccessed = true;
+							customerEvent.Processed = true;
 							customerEvent.Error = " 5 RetryCounts hit";
-							customerEvent.ProccessedAt = DateTimeOffset.UtcNow;
+							customerEvent.ProcessedAt = DateTimeOffset.UtcNow;
 						}
 					}
 
@@ -95,11 +96,10 @@ namespace Infrastructure.Services.BackgroundServices
 		}
 
 
-		private async Task HandleCreateCustomerEvent(CustomerEventModel customerEvent , CancellationToken cancellationToken)
+		private async Task HandleCreateCustomerEvent(OutboxMessageModel customerEvent , CancellationToken cancellationToken)
 		{
 
-			var connectionString = string.IsNullOrWhiteSpace(customerEvent.ConnectionString) ?
-									string.Format(_options.EfCore.TenantConnectionString, customerEvent.TenantName) : customerEvent.ConnectionString;
+			var connectionString = string.Format(_options.EfCore.TenantConnectionString, customerEvent.TenantName);
 
 			var options = new DbContextOptionsBuilder<TenantEfCoreDbContext>()
 				.UseSqlServer(connectionString)
@@ -109,8 +109,8 @@ namespace Infrastructure.Services.BackgroundServices
 				new TenantEfCoreDbContext(options);
 
 			await tenantDb.Database.MigrateAsync(cancellationToken);
-			customerEvent.ProccessedAt = DateTimeOffset.UtcNow;
-			customerEvent.IsProccessed = true;
+			customerEvent.ProcessedAt = DateTimeOffset.UtcNow;
+			customerEvent.Processed = true;
 		}
 	}
 }

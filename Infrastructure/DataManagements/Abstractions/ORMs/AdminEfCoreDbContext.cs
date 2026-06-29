@@ -4,7 +4,7 @@ using Domain.Customer;
 using Infrastructure.DataManagements.Configurations.Account;
 using Infrastructure.DataManagements.Configurations.Bank;
 using Infrastructure.DataManagements.Configurations.Customer;
-using Infrastructure.DataManagements.Configurations.Order;
+using Infrastructure.DataManagements.Configurations.OutboxMessage;
 using Infrastructure.DataManagements.DataModels;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,13 +19,14 @@ namespace Infrastructure.DataManagements.Abstractions.ORMs
 		public DbSet<Bank> Banks => Set<Bank>();
 		public DbSet<Account> Accounts => Set<Account>();
 		public DbSet<Customer> Customers => Set<Customer>();
-		public DbSet<CustomerEventModel> CustomerEvents => Set<CustomerEventModel>();
+		public DbSet<OutboxMessageModel> OutboxMessages => Set<OutboxMessageModel>();
+
 		protected override void OnModelCreating(ModelBuilder modelBuilder)
 		{
 			modelBuilder.ApplyConfiguration(new BankDataConfiguration());
 			modelBuilder.ApplyConfiguration(new CustomerDataConfiguration());
 			modelBuilder.ApplyConfiguration(new AccountDataConfiguration());
-			modelBuilder.ApplyConfiguration(new CustomerEventDataConfiguration());
+			modelBuilder.ApplyConfiguration(new OutboxMessageConfiguration());
 
 			base.OnModelCreating(modelBuilder);
 		}

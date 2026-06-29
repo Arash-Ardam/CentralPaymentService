@@ -1,8 +1,7 @@
 ﻿using Application.Abstractions;
+using Application.Abstractions.Dtos;
 using Application.Abstractions.Services;
 using Application.OrderManagement.Dtos.GroupedOrder;
-using Application.OrderManagement.Dtos.OrderEvent;
-using Application.OrderManagement.Dtos.SingleOrder;
 using Application.OrderManagement.Enums;
 using Application.OrderManagement.Mappings;
 using Application.OrderManagement.Services;
@@ -23,8 +22,8 @@ internal class GroupedOrderApplication : IGroupedOrderApplication
 	private readonly IBankRepository _bankRepository;
 	private readonly IPaymentServicesFactory _paymentServiceFactory;
 	private readonly IPaymentPolicyService _paymentPolicyService;
-	private readonly IOrderEventService _orderEventService;
 	private readonly IOrderReportService _reportService;
+	private readonly IOutboxMessageService _outboxMessageService;
 	private readonly IUnitOfWork _unitOfWork;
 	public GroupedOrderApplication(IAccountRepository accountRespository,
 						 IOrderRepository orderRepository,
@@ -32,9 +31,9 @@ internal class GroupedOrderApplication : IGroupedOrderApplication
 						 IPaymentServicesFactory pspServiceFactory,
 						 IBankRepository bankRepository,
 						 IPaymentPolicyService paymentPolicyService,
-						 IOrderEventService orderEventService,
 						 IUnitOfWork unitOfWork,
-						 IOrderReportService reportService)
+						 IOrderReportService reportService,
+						 IOutboxMessageService outboxMessageService)
 	{
 		_accountRepository = accountRespository ?? throw new ArgumentNullException(nameof(accountRespository));
 		_orderRepository = orderRepository ?? throw new ArgumentNullException(nameof(orderRepository));
@@ -42,9 +41,9 @@ internal class GroupedOrderApplication : IGroupedOrderApplication
 		_paymentServiceFactory = pspServiceFactory ?? throw new ArgumentNullException(nameof(pspServiceFactory));
 		_bankRepository = bankRepository ?? throw new ArgumentNullException(nameof(bankRepository));
 		_paymentPolicyService = paymentPolicyService ?? throw new ArgumentNullException(nameof(paymentPolicyService));
-		_orderEventService = orderEventService ?? throw new ArgumentNullException(nameof(orderEventService));
 		_unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
 		_reportService = reportService ?? throw new ArgumentNullException(nameof(reportService));
+		_outboxMessageService = outboxMessageService ?? throw new ArgumentNullException(nameof(outboxMessageService));
 	}
 
 	public async Task<ApplicationResponse<Guid>> CreateAsync(CreateGroupedOrderDto orderDto)
@@ -147,7 +146,7 @@ internal class GroupedOrderApplication : IGroupedOrderApplication
 			targetOrder.AddGroupedTransactions(transactions);
 
 			await _orderRepository.UpdateAsync(targetOrder);
-			await PublishEvent(targetOrder, targetOrder.Specifics.Status, OrderEventType.AddTransactions);
+			await PublishEvent(targetOrder, targetOrder.Specifics.Status, OutboxBehaviorType.AddTransactions);
 			await _unitOfWork.SaveTenantChangesAsync();
 
 			response.Message = "Transactions added successfully";
@@ -182,7 +181,7 @@ internal class GroupedOrderApplication : IGroupedOrderApplication
 			targetOrder.RemoveGroupedTransaction(transactionId);
 
 			await _orderRepository.UpdateAsync(targetOrder);
-			await PublishEvent(targetOrder, targetOrder.Specifics.Status, OrderEventType.RemoveTransaction, paymentId);
+			await PublishEvent(targetOrder, targetOrder.Specifics.Status, OutboxBehaviorType.RemoveTransaction, paymentId);
 
 			await _unitOfWork.SaveTenantChangesAsync();
 
@@ -238,7 +237,7 @@ internal class GroupedOrderApplication : IGroupedOrderApplication
 			targetOrder.FinalizeGroupedOrder();
 
 			await _orderRepository.UpdateAsync(targetOrder);
-			await PublishEvent(targetOrder, targetOrder.Specifics.Status, OrderEventType.Submit);
+			await PublishEvent(targetOrder, targetOrder.Specifics.Status, OutboxBehaviorType.Submit);
 
 			await _unitOfWork.SaveTenantChangesAsync();
 			response.Message = "Order finalized and ready to proccess";
@@ -291,7 +290,7 @@ internal class GroupedOrderApplication : IGroupedOrderApplication
 
 			}
 
-			await PublishEvent(order, order.Specifics.Status, OrderEventType.SentToBank);
+			await PublishEvent(order, order.Specifics.Status, OutboxBehaviorType.SentToBank);
 			await _orderRepository.UpdateAsync(order);
 
 			await _unitOfWork.SaveTenantChangesAsync();
@@ -342,7 +341,7 @@ internal class GroupedOrderApplication : IGroupedOrderApplication
 					}
 				}
 
-				await PublishEvent(order, order.Specifics.Status, OrderEventType.Inquiry);
+				await PublishEvent(order, order.Specifics.Status, OutboxBehaviorType.Inquiry);
 				await _orderRepository.UpdateAsync(order);
 
 				await _unitOfWork.SaveTenantChangesAsync();
@@ -434,12 +433,12 @@ internal class GroupedOrderApplication : IGroupedOrderApplication
 		}
 	}
 
-	public async Task<ApplicationResponse<GroupedOrderTransactionReportDto>> ReportTrasnactionAsync(string orderId,string transactionOrderId)
+	public async Task<ApplicationResponse<GroupedOrderTransactionReportDto>> ReportTrasnactionAsync(string orderId, string transactionOrderId)
 	{
 		var response = new ApplicationResponse<GroupedOrderTransactionReportDto>() { IsSuccess = true };
 		try
 		{
-			var report = await _reportService.ReportGroupedOrderTranasctionAsync(orderId,transactionOrderId);
+			var report = await _reportService.ReportGroupedOrderTranasctionAsync(orderId, transactionOrderId);
 
 			if (report is null)
 			{
@@ -476,29 +475,35 @@ internal class GroupedOrderApplication : IGroupedOrderApplication
 		return TransactionType.Paya;
 	}
 
-	private async Task PublishEvent(Order targerOrder, OrderStatus status, OrderEventType type, string? payload = null)
+	private async Task PublishEvent(Order targerOrder, OrderStatus status, OutboxBehaviorType behavior, string? payload = null)
 	{
-		var oldEvent = await _orderEventService.FindAsync(targerOrder.OrderId);
+		var oldEvent = await _outboxMessageService.FindAsync(targerOrder.OrderId);
 		if (oldEvent is not null)
 		{
-			await _orderEventService.AddAsync(new OrderEventDto
+			await _outboxMessageService.PublishAsync(new OutboxMessageDto
 			{
-				OrderId = targerOrder.OrderId,
-				PaymentType = PaymentType.Grouped,
-				EventType = type,
-				Status = status,
-				Payload = string.IsNullOrWhiteSpace(payload) ? null : payload
+				OutboxId = targerOrder.OrderId,
+				Type = OutBoxType.GroupedOrder,
+				BehaviorType = behavior,
+				TenantId = oldEvent.TenantId,
+				TenantName = oldEvent.TenantName,
+				Payload = string.IsNullOrWhiteSpace(payload) ? Enum.GetName(status) : payload
 			});
+
+			await _unitOfWork.SaveAdminChangesAsync();
+
 		}
 	}
 
-	private async Task PublishEvent(Customer customer, Account account, Order order)
+	private Task PublishEvent(Customer customer, Account account, Order order)
 	{
-		await _orderEventService.AddAsync(new OrderEventDto
+		_outboxMessageService.PublishAsync(new OutboxMessageDto
 		{
-			OrderId = order.OrderId,
-			PaymentType = PaymentType.Grouped,
-			EventType = Enums.OrderEventType.Create,
+			OutboxId = order.OrderId,
+			Type = OutBoxType.GroupedOrder,
+			BehaviorType = OutboxBehaviorType.Create,
+			TenantId = customer.Id,
+			TenantName = customer.TenantName,
 			Payload = JsonSerializer.Serialize(new GroupedOrderReportDto
 			{
 				OwnerFullName = $"{customer.Info.FirstName} {customer.Info.LastName}",
@@ -512,7 +517,11 @@ internal class GroupedOrderApplication : IGroupedOrderApplication
 				OrderId = order.OrderId,
 			})
 		});
+
+		return _unitOfWork.SaveAdminChangesAsync();
 	}
+
+
 	private async Task<(Order order, Bank bank, Account account, Customer customer)> LoadOrderRequiredContexts(Guid orderId)
 	{
 		var targetOrder = await _orderRepository.GetAsync(orderId);

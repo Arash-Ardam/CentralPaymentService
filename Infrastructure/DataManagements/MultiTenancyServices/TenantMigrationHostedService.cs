@@ -32,6 +32,9 @@ namespace Infrastructure.DataManagements.MultiTenancyServices
 
 			var tenants = tenantRegistryService.GetAll();
 
+			await adminDb.Database.MigrateAsync(cancellationToken);
+			Console.WriteLine($"Admin Migrated");
+
 			foreach (var tenant in tenants)
 			{
 				var builder = new DbContextOptionsBuilder<TenantEfCoreDbContext>();

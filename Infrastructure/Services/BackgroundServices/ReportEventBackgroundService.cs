@@ -8,7 +8,6 @@ using Infrastructure.DataManagements.MultiTenancyServices.TenantRegistry;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Abstractions;
 using System.Text.Json;
 
 namespace Infrastructure.Services.BackgroundServices
@@ -33,120 +32,160 @@ namespace Infrastructure.Services.BackgroundServices
 			{
 				var tenants = _tenantRegistryService.GetAll();
 
-				foreach (var tenant in tenants)
+
+				await using var adminDb =
+					new AdminEfCoreDbContext(
+						new DbContextOptionsBuilder<AdminEfCoreDbContext>()
+						.UseSqlServer(_options.EfCore.BaseConnectionString)
+						.Options);
+
+				if (!adminDb.OutboxMessages.Any(x => x.Processed == false))
 				{
-					var connectionString = string.IsNullOrWhiteSpace(tenant.ConnectionString) ?
-						string.Format(_options.EfCore.TenantConnectionString, tenant.Name) : tenant.ConnectionString;
-
-					var options = new DbContextOptionsBuilder<TenantEfCoreDbContext>()
-						.UseSqlServer(connectionString)
-						.Options;
-
-					await using var tenantDb =
-						new TenantEfCoreDbContext(options);
-
-					if (!tenantDb.OrderEvents.Any(x => x.Processed == false))
-						continue;
-
-					var orderEvents = await tenantDb.OrderEvents
-						.Where(x => x.Processed == false)
-						.OrderBy(x => x.CreatedAt)
-						.Take(100)
-						.ToListAsync(stoppingToken);
-
-					var orderIds =
-						orderEvents.Select(x => x.OrderId)
-						.Distinct()
-						.ToList();
-
-					_groupedOrderReports =
-						await tenantDb.GroupedOrderReports
-							.Include(rep => rep.Transactions)
-							.Where(x => orderIds.Contains(x.OrderId))
-							.ToDictionaryAsync(x => x.OrderId, stoppingToken);
-
-					_singleOrderReports =
-						await tenantDb.SingleOrderReports
-							.Where(x => orderIds.Contains(x.OrderId))
-							.ToDictionaryAsync(x => x.OrderId, stoppingToken);
-
-					_orders =
-						await tenantDb.Orders
-							.Include(x => x.GroupedTransactions)
-							.Include(x => x.SingleTransaction)
-							.Where(x => orderIds.Contains(x.OrderId))
-							.ToDictionaryAsync(x => x.OrderId, stoppingToken);
-
-					foreach (var orderEvent in orderEvents)
-					{
-						try
-						{
-							if (orderEvent.RetryCount >= 5)
-							{
-								orderEvent.Processed = true;
-								orderEvent.Error = "Retry count hits";
-								continue;
-							}
-
-
-							if (orderEvent.PaymentType == PaymentType.Single)
-							{
-								_singleOrderReports.TryGetValue(orderEvent.OrderId, out var singleReport);
-								await HandleSingleOrderEvents(orderEvent, tenantDb, singleReport, stoppingToken);
-							}
-
-							if (orderEvent.PaymentType == PaymentType.Grouped)
-							{
-								_groupedOrderReports.TryGetValue(orderEvent.OrderId, out var groupedReport);
-								_orders.TryGetValue(orderEvent.OrderId, out var order);
-								await HandleGroupedOrderEvents(orderEvent, tenantDb, order, groupedReport, stoppingToken);
-							}
-
-							// mark event as proccessed
-							orderEvent.Processed = true;
-							orderEvent.ProcessedAt = DateTimeOffset.UtcNow;
-						}
-
-
-						catch (Exception ex)
-						{
-							orderEvent.Processed = false;
-							orderEvent.RetryCount++;
-							orderEvent.Error = $"{ex.Message} : {ex.InnerException?.Message}".Trim();
-						}
-					}
-
-					await tenantDb.SaveChangesAsync(stoppingToken);
+					await Task.Delay(TimeSpan.FromSeconds(60), stoppingToken);
+					continue;
 				}
 
+				var outboxMessages = await adminDb.OutboxMessages
+					.Where(x =>
+						!x.Processed &&
+						x.Type != OutBoxType.Customer &&
+						x.RetryCount < 5)
+					.OrderBy(x => x.CreatedAt)
+					.Take(500)
+					.ToListAsync(stoppingToken);
 
+				foreach (var tenantGroup in outboxMessages.GroupBy(x => x.TenantId))
+				{
+					await ProcessTenantMessages(
+						tenantGroup.Key,
+						tenantGroup.ToList(),
+						stoppingToken);
+				}
+
+				await adminDb.SaveChangesAsync(stoppingToken);
 				await Task.Delay(TimeSpan.FromSeconds(60), stoppingToken);
 			}
 		}
 
-
-		private async Task HandleSingleOrderEvents(OrderEventModel orderEvent, TenantEfCoreDbContext tenantDb, SingleOrderReportModel report, CancellationToken stoppingToken)
+		private async Task ProcessTenantMessages(Guid tenantId, List<OutboxMessageModel> messages, CancellationToken token)
 		{
-			switch (orderEvent.EventType)
+			var tenant = _tenantRegistryService.Find(tenantId);
+
+			if (tenant is null)
+				return;
+
+			var connectionString =
+				string.IsNullOrWhiteSpace(tenant.ConnectionString)
+					? string.Format(_options.EfCore.TenantConnectionString, tenant.Name)
+					: tenant.ConnectionString;
+
+			await using var tenantDb =
+				new TenantEfCoreDbContext(
+					new DbContextOptionsBuilder<TenantEfCoreDbContext>()
+						.UseSqlServer(connectionString)
+						.Options);
+
+			var orderIds = messages
+				.Select(x => x.OutboxId)
+				.Distinct()
+				.ToList();
+
+			await LoadCaches(
+				tenantDb,
+				orderIds,
+				token);
+
+			foreach (var message in messages)
 			{
-				case OrderEventType.Create:
+				try
+				{
+					switch (message.Type)
 					{
-						var reportModel = JsonSerializer.Deserialize<SingleOrderReportModel>(orderEvent.Payload);
+						case OutBoxType.SingleOrder:
+							await HandleSingleAsync(message, tenantDb, token);
+							break;
+
+						case OutBoxType.GroupedOrder:
+							await HandleGroupedAsync(message, tenantDb, token);
+							break;
+					}
+
+					message.Processed = true;
+					message.ProcessedAt = DateTimeOffset.UtcNow;
+				}
+				catch (Exception ex)
+				{
+					message.RetryCount++;
+
+					if (message.RetryCount >= 5)
+						message.Processed = true;
+
+					message.Error = ex.ToString();
+				}
+			}
+
+			await tenantDb.SaveChangesAsync(token);
+		}
+
+		private async Task LoadCaches(TenantEfCoreDbContext tenantDb, List<string> orderIds, CancellationToken token)
+		{
+			_orders =
+				await tenantDb.Orders
+					.Include(x => x.GroupedTransactions)
+					.Include(x => x.SingleTransaction)
+					.Where(x => orderIds.Contains(x.OrderId))
+					.ToDictionaryAsync(x => x.OrderId, token);
+
+			_groupedOrderReports =
+				await tenantDb.GroupedOrderReports
+					.Include(x => x.Transactions)
+					.Where(x => orderIds.Contains(x.OrderId))
+					.ToDictionaryAsync(x => x.OrderId, token);
+
+			_singleOrderReports =
+				await tenantDb.SingleOrderReports
+					.Where(x => orderIds.Contains(x.OrderId))
+					.ToDictionaryAsync(x => x.OrderId, token);
+		}
+
+		private async Task HandleSingleAsync(OutboxMessageModel outboxMessage, TenantEfCoreDbContext tenantDb, CancellationToken cancellationToken)
+		{
+			_singleOrderReports.TryGetValue(
+					outboxMessage.OutboxId,
+					out var report);
+
+			switch (outboxMessage.BehaviorType)
+			{
+				case OutboxBehaviorType.Create:
+					{
+						var reportModel = JsonSerializer.Deserialize<SingleOrderReportModel>(outboxMessage.Payload);
 						if (reportModel is null)
 							throw new InvalidOperationException(
 								"Payload deserialization failed");
 
 						if (report is null)
 						{
-							await tenantDb.SingleOrderReports.AddAsync(reportModel, stoppingToken);
-							_singleOrderReports.Add(reportModel.OrderId, reportModel);
+							await tenantDb.SingleOrderReports.AddAsync(reportModel, cancellationToken);
 						}
 						break;
 					}
-				case OrderEventType.AddSpecs or OrderEventType.Submit or OrderEventType.SentToBank or OrderEventType.Inquiry:
+				case OutboxBehaviorType.AddSpecs:
+					{
+						if(report is not null)
+						{
+							_orders.TryGetValue(outboxMessage.OutboxId, out var order);
+							report.DepositFullName = $"{order.SingleTransaction.Specs.FirstName} {order.SingleTransaction.Specs.LastName}".Trim();
+							report.DepositAccount = order.SingleTransaction.Specs.AccountNumber;
+							report.Status = Enum.Parse<OrderStatus>(outboxMessage.Payload);
+						}
+						else
+							throw new ArgumentException("order id is invalid");
+						break;
+					}
+				case OutboxBehaviorType.Submit or OutboxBehaviorType.SentToBank or OutboxBehaviorType.Inquiry:
 					{
 						if (report is not null)
-							report.Status = orderEvent.Status;
+							report.Status = Enum.Parse<OrderStatus>(outboxMessage.Payload);
 						else
 							throw new ArgumentException("order id is invalid");
 						break;
@@ -156,49 +195,59 @@ namespace Infrastructure.Services.BackgroundServices
 			}
 		}
 
-
-		private async Task HandleGroupedOrderEvents(OrderEventModel orderEvent, TenantEfCoreDbContext tenantDb, Order order, GroupedOrderReportModel report, CancellationToken stoppingToken)
+		private async Task HandleGroupedAsync(OutboxMessageModel outboxMessage, TenantEfCoreDbContext tenantDb, CancellationToken cancellationToken)
 		{
-			switch (orderEvent.EventType)
+			_groupedOrderReports.TryGetValue(
+				outboxMessage.OutboxId,
+				out var report);
+
+			_orders.TryGetValue(
+				outboxMessage.OutboxId,
+				out var order);
+
+			switch (outboxMessage.BehaviorType)
 			{
-				case OrderEventType.Create:
-					var reportModel = JsonSerializer.Deserialize<GroupedOrderReportModel>(orderEvent.Payload);
+				case OutboxBehaviorType.Create:
+					var reportModel = JsonSerializer.Deserialize<GroupedOrderReportModel>(outboxMessage.Payload);
 					if (reportModel is null)
 						throw new InvalidOperationException(
 							"Payload deserialization failed");
 
 					if (report is null)
 					{
-						await tenantDb.GroupedOrderReports.AddAsync(reportModel, stoppingToken);
-						_groupedOrderReports.Add(reportModel.OrderId, reportModel);
+						await tenantDb.GroupedOrderReports.AddAsync(reportModel, cancellationToken);
 					}
 					break;
-
-				case OrderEventType.Submit:
+				case OutboxBehaviorType.Update:
+					break;
+				case OutboxBehaviorType.Delete:
+					break;
+				case OutboxBehaviorType.DeleteAll:
+					break;
+				case OutboxBehaviorType.AddSpecs:
+					break;
+				case OutboxBehaviorType.Submit:
 					if (report is not null)
 					{
-						report.Status = orderEvent.Status;
+						report.Status = Enum.Parse<OrderStatus>(outboxMessage.Payload);
 						foreach (var transaction in report.Transactions)
 						{
 							transaction.Status = GroupedTransactionStatus.Pending;
 						}
 					}
 					break;
-
-				case OrderEventType.SentToBank or OrderEventType.Inquiry:
+				case OutboxBehaviorType.SentToBank or OutboxBehaviorType.Inquiry:
 					if (report is not null)
 					{
 						var trxMap = order.GroupedTransactions.ToDictionary(x => x.Specs.PaymentId);
 						foreach (var item in report.Transactions)
 						{
-							if (trxMap.TryGetValue(item.OrderId, out var trx))
-								item.Status = trx.Status;
+							if (trxMap.TryGetValue(item.OrderId, out var tran))
+								item.Status = tran.Status;
 						}
 					}
-						
 					break;
-
-				case OrderEventType.AddTransactions:
+				case OutboxBehaviorType.AddTransactions:
 					if (report is not null)
 					{
 						var existingIds =
@@ -208,7 +257,7 @@ namespace Infrastructure.Services.BackgroundServices
 
 						report.Transactions.AddRange(order.GroupedTransactions
 							.Where(x => !existingIds.Contains(x.Specs.PaymentId))
-							.Select(trx => 
+							.Select(trx =>
 							new GroupedOrderTransactionReportModel
 							{
 								OrderId = trx.Specs.PaymentId,
@@ -226,9 +275,13 @@ namespace Infrastructure.Services.BackgroundServices
 					else
 						throw new ArgumentException("order id is invalid");
 					break;
-				case OrderEventType.RemoveTransaction:
-					if(report is not null && order is not null)
-						report.Transactions.Remove(report.Transactions.Single(trx => trx.OrderId == orderEvent.Payload));
+				case OutboxBehaviorType.RemoveTransaction:
+					var trx = report.Transactions.FirstOrDefault(x => x.OrderId == outboxMessage.Payload);
+
+					if (trx != null)
+					{
+						report.Transactions.Remove(trx);
+					}
 					break;
 				default:
 					break;

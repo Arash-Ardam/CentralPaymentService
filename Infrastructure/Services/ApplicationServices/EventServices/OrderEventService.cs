@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Services.ApplicationServices.EventServices
 {
-	internal sealed class OrderEventService : IOrderEventService
+	internal sealed class OrderEventService 
 	{
 		private readonly TenantEfCoreDbContext _tenantDb;
 		private readonly IMapper _mapper;
@@ -18,23 +18,23 @@ namespace Infrastructure.Services.ApplicationServices.EventServices
 			_mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
 		}
 
-		public Task AddAsync(OrderEventDto eventDto)
-		{
-			var model = _mapper.Map<OrderEventModel>(eventDto);
-			_tenantDb.OrderEvents.AddAsync(model);
-			return Task.CompletedTask;
-		}
+		//public Task AddAsync(OrderEventDto eventDto)
+		//{
+		//	var model = _mapper.Map<OrderEventModel>(eventDto);
+		//	_tenantDb.OrderEvents.AddAsync(model);
+		//	return Task.CompletedTask;
+		//}
 
-		public async Task<OrderEventDto> FindAsync(string orderId)
-		{
-			var model = await _tenantDb.OrderEvents.FirstOrDefaultAsync(e => e.OrderId == orderId);
-			return _mapper.Map<OrderEventDto>(model);
-		}
+		//public async Task<OrderEventDto> FindAsync(string orderId)
+		//{
+		//	var model = await _tenantDb.OrderEvents.FirstOrDefaultAsync(e => e.OrderId == orderId);
+		//	return _mapper.Map<OrderEventDto>(model);
+		//}
 
-		public async Task<OrderEventDto> FindAsync(Guid eventId)
-		{
-			var model = await _tenantDb.OrderEvents.FirstOrDefaultAsync(e => e.Id == eventId);
-			return _mapper.Map<OrderEventDto>(model);
-		}
+		//public async Task<OrderEventDto> FindAsync(Guid eventId)
+		//{
+		//	var model = await _tenantDb.OrderEvents.FirstOrDefaultAsync(e => e.Id == eventId);
+		//	return _mapper.Map<OrderEventDto>(model);
+		//}
 	}
 }

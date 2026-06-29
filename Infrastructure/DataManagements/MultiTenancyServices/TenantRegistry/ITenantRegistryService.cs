@@ -6,5 +6,7 @@ namespace Infrastructure.DataManagements.MultiTenancyServices.TenantRegistry
 	{
 		Task RefreshAsync();
 		IReadOnlyList<TenantInfoDto> GetAll();
+
+		TenantInfoDto? Find(Guid id);
 	}
 }

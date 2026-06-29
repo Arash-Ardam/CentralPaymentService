@@ -6,7 +6,7 @@ using Infrastructure.DataManagements.DataModels;
 
 namespace Infrastructure.Services.ApplicationServices.EventServices
 {
-	internal sealed class CustomerEventService : ICustomerEventService
+	internal sealed class CustomerEventService
 	{
 		private readonly AdminEfCoreDbContext _adminDb;
 		private readonly IMapper _mapper;
@@ -15,11 +15,11 @@ namespace Infrastructure.Services.ApplicationServices.EventServices
 			_adminDb = adminDb ?? throw new ArgumentNullException(nameof(adminDb));
 			_mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
 		}
-		public Task PublishEvent(CustomerEventDto eventDto)
-		{
-			var eventModel = _mapper.Map<CustomerEventModel>(eventDto);
-			return _adminDb.CustomerEvents.AddAsync(eventModel).AsTask();
-		}
+		//public Task PublishEvent(CustomerEventDto eventDto)
+		//{
+		//	var eventModel = _mapper.Map<CustomerEventModel>(eventDto);
+		//	return _adminDb.CustomerEvents.AddAsync(eventModel).AsTask();
+		//}
 
 	}
 }

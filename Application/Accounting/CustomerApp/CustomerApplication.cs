@@ -1,8 +1,10 @@
 ﻿using Application.Abstractions;
+using Application.Abstractions.Dtos;
 using Application.Abstractions.Services;
 using Application.Accounting.CustomerApp.Dtos;
 using Application.Accounting.CustomerApp.Events;
 using Application.Accounting.CustomerApp.Services;
+using Application.OrderManagement.Enums;
 using Domain.Customer;
 using Domain.Customer.Factories;
 using MediatR;
@@ -13,20 +15,20 @@ namespace Application.Accounting.CustomerApp
 	{
 		private readonly ICustomerRepository _customerRepository;
 		private readonly ICustomerQueryService _customerQueryService;
-		private readonly ICustomerEventService _customerEventService;
+		private readonly IOutboxMessageService _outboxMessageService;
 		private readonly IMediator _mediator;
 		private readonly IUnitOfWork _unitOfWrk;
 		public CustomerApplication(ICustomerRepository customerRepository,
 							 IMediator mediator,
 							 ICustomerQueryService customerQueryService,
 							 IUnitOfWork unitOfWrk,
-							 ICustomerEventService customerEventService)
+							 IOutboxMessageService outboxMessageService)
 		{
 			_customerRepository = customerRepository ?? throw new ArgumentNullException(nameof(customerRepository));
 			_mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
 			_customerQueryService = customerQueryService ?? throw new ArgumentNullException(nameof(customerQueryService));
 			_unitOfWrk = unitOfWrk ?? throw new ArgumentNullException(nameof(unitOfWrk));
-			_customerEventService = customerEventService ?? throw new ArgumentNullException(nameof(customerEventService));
+			_outboxMessageService = outboxMessageService ?? throw new ArgumentNullException(nameof(outboxMessageService));
 		}
 
 		public async Task<ApplicationResponse<Guid>> CreateAsync(CreateCustomerDto createCustomerDto)
@@ -43,11 +45,12 @@ namespace Application.Accounting.CustomerApp
 
 				Guid createdCustomerId = await _customerRepository.AddAsync(customer);
 
-				await _customerEventService.PublishEvent(new CustomerEventDto
+				await _outboxMessageService.PublishAsync(new OutboxMessageDto
 				{
+					TenantId = createdCustomerId,
 					TenantName = customer.TenantName,
-					Type = Enums.CustomerEventType.Create,
-					ConnectionString = customer.ConnectionString,
+					Type = OutBoxType.Customer,
+					BehaviorType = OutboxBehaviorType.Create,
 				});
 
 				await _unitOfWrk.SaveAdminChangesAsync();

@@ -29,8 +29,9 @@ namespace Infrastructure.Services
 			#endregion
 
 			#region Event Services
-			services.AddScoped<ICustomerEventService, CustomerEventService>();
-			services.AddScoped<IOrderEventService, OrderEventService>();
+			//services.AddScoped<ICustomerEventService, CustomerEventService>();
+			//services.AddScoped<IOrderEventService, OrderEventService>();
+			services.AddScoped<IOutboxMessageService, OutboxMessageService>();
 			#endregion
 
 			#region Report Services

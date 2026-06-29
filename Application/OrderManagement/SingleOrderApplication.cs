@@ -1,6 +1,6 @@
 ﻿using Application.Abstractions;
+using Application.Abstractions.Dtos;
 using Application.Abstractions.Services;
-using Application.OrderManagement.Dtos.OrderEvent;
 using Application.OrderManagement.Dtos.SingleOrder;
 using Application.OrderManagement.Enums;
 using Application.OrderManagement.Mappings;
@@ -20,10 +20,9 @@ namespace Application.OrderManagement
 		private readonly IOrderRepository _orderRepository;
 		private readonly ICustomerRepository _customerRepository;
 		private readonly IBankRepository _bankRepository;
-		private readonly ITenantContext _tenantContext;
+		private readonly IOutboxMessageService _outboxMessageService;
 		private readonly IUnitOfWork _unitOfWork;
 		private readonly IOrderReportService _reportService;
-		private readonly IOrderEventService _orderEventService;
 		private readonly IPaymentServicesFactory _paymentServiceFactory;
 
 		public SingleOrderApplication(IAccountRepository accountRespository,
@@ -32,9 +31,8 @@ namespace Application.OrderManagement
 							 IPaymentServicesFactory pspServiceFactory,
 							 IBankRepository bankRepository,
 							 IPaymentPolicyService paymentPolicyService,
-							 ITenantContext tenantContext,
+							 IOutboxMessageService outboxMessageService,
 							 IOrderReportService reportService,
-							 IOrderEventService orderEventService,
 							 IUnitOfWork unitOfWork)
 		{
 			_accountRepository = accountRespository ?? throw new ArgumentNullException(nameof(accountRespository));
@@ -42,9 +40,8 @@ namespace Application.OrderManagement
 			_customerRepository = customerRepository ?? throw new ArgumentNullException(nameof(customerRepository));
 			_paymentServiceFactory = pspServiceFactory ?? throw new ArgumentNullException(nameof(pspServiceFactory));
 			_bankRepository = bankRepository ?? throw new ArgumentNullException(nameof(bankRepository));
-			_tenantContext = tenantContext ?? throw new ArgumentNullException(nameof(tenantContext));
+			_outboxMessageService = outboxMessageService ?? throw new ArgumentNullException(nameof(outboxMessageService));
 			_reportService = reportService ?? throw new ArgumentNullException(nameof(reportService));
-			_orderEventService = orderEventService ?? throw new ArgumentNullException(nameof(orderEventService));
 			_unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
 		}
 
@@ -132,7 +129,7 @@ namespace Application.OrderManagement
 				targerOrder.AddSingleTransaction(transaction);
 
 				await _orderRepository.UpdateAsync(targerOrder);
-				await PublishEvent(targerOrder, OrderStatus.Drafted, OrderEventType.AddSpecs);
+				await PublishEvent(targerOrder, OrderStatus.Drafted, OutboxBehaviorType.AddSpecs);
 
 				await _unitOfWork.SaveTenantChangesAsync();
 
@@ -167,7 +164,7 @@ namespace Application.OrderManagement
 
 				targerOrder.RemoveSingleTransaction();
 				await _orderRepository.UpdateAsync(targerOrder);
-				await PublishEvent(targerOrder, OrderStatus.Drafted, OrderEventType.AddSpecs);
+				await PublishEvent(targerOrder, OrderStatus.Drafted, OutboxBehaviorType.AddSpecs);
 
 
 				await _unitOfWork.SaveTenantChangesAsync();
@@ -202,7 +199,7 @@ namespace Application.OrderManagement
 				targerOrder.FinalizeSingleOrder();
 
 				await _orderRepository.UpdateAsync(targerOrder);
-				await PublishEvent(targerOrder, OrderStatus.Submited, OrderEventType.Submit);
+				await PublishEvent(targerOrder, OrderStatus.Submited, OutboxBehaviorType.Submit);
 								
 				await _unitOfWork.SaveTenantChangesAsync();
 
@@ -258,7 +255,7 @@ namespace Application.OrderManagement
 					order.MarkSingleRequestStatus(providerResponse.Data.Status, providerResponse.Message);
 
 				await _orderRepository.UpdateAsync(order);
-				await PublishEvent(order, OrderStatus.Pending, OrderEventType.SentToBank);
+				await PublishEvent(order, OrderStatus.Pending, OutboxBehaviorType.SentToBank);
 
 				await _unitOfWork.SaveTenantChangesAsync();
 
@@ -313,7 +310,7 @@ namespace Application.OrderManagement
 					await _orderRepository.UpdateAsync(order);
 				}
 
-				await PublishEvent(order, order.Specifics.Status, OrderEventType.Inquiry);
+				await PublishEvent(order, order.Specifics.Status, OutboxBehaviorType.Inquiry);
 				await _unitOfWork.SaveTenantChangesAsync();
 
 				applicationResponse.IsSuccess = response.IsSuccess;
@@ -359,23 +356,22 @@ namespace Application.OrderManagement
 			}
 		}
 
-		private async Task PublishEvent(Order targerOrder,OrderStatus status,OrderEventType type)
+		private async Task PublishEvent(Order targerOrder,OrderStatus status,OutboxBehaviorType type)
 		{
-			var oldEvent = await _orderEventService.FindAsync(targerOrder.OrderId);
-			if (oldEvent is not null)
+			var outbox = await _outboxMessageService.FindAsync(targerOrder.OrderId);
+			if (outbox is not null)
 			{
-				var reportDto = JsonSerializer.Deserialize<SingleOrderReportDto>(oldEvent.Payload);
-				reportDto.DepositFullName = $"{targerOrder.SingleTransaction.Specs.FirstName} {targerOrder.SingleTransaction.Specs.LastName}";
-				reportDto.DepositAccount = targerOrder.SingleTransaction.Specs.AccountNumber;
-				reportDto.Status = OrderStatus.Submited;
-
-				await _orderEventService.AddAsync(new OrderEventDto
+				await _outboxMessageService.PublishAsync(new OutboxMessageDto
 				{
-					OrderId = targerOrder.OrderId,
-					PaymentType = PaymentType.Single,
-					EventType = OrderEventType.Submit,
-					Status = status,
+					OutboxId = targerOrder.OrderId,
+					Type = OutBoxType.SingleOrder,
+					BehaviorType = type,
+					TenantId = outbox.TenantId,
+					TenantName = outbox.TenantName,
+					Payload = Enum.GetName(typeof(OrderStatus),status)	
 				});
+
+				await _unitOfWork.SaveAdminChangesAsync();
 			}
 		}
 
@@ -391,22 +387,19 @@ namespace Application.OrderManagement
 				TenantName = customer.TenantName,
 				OrderId = order.OrderId,
 			});
-			await _orderEventService.AddAsync(new OrderEventDto
+
+			await _outboxMessageService.PublishAsync(new OutboxMessageDto
 			{
-				OrderId = order.OrderId,
-				PaymentType = PaymentType.Single,
-				EventType = Enums.OrderEventType.Create,
-				Payload = JsonSerializer.Serialize(new SingleOrderReportDto
-				{
-					OwnerFullName = $"{customer.Info.FirstName} {customer.Info.LastName}",
-					SourceAccount = account.AccountNumber,
-					Amount = order.Specifics.Amount,
-					Description = order.Specifics.Description,
-					Status = OrderStatus.Drafted,
-					TenantName = customer.TenantName,
-					OrderId = order.OrderId,
-				})
+				OutboxId = order.OrderId,
+				Type = OutBoxType.SingleOrder,
+				BehaviorType = OutboxBehaviorType.Create,
+				Payload = payload,
+				TenantId = customer.Id,
+				TenantName =customer.TenantName
 			});
+
+			await _unitOfWork.SaveAdminChangesAsync();
+			
 		}
 		private async Task<ApplicationResponse<(Order order, Bank bank, Account account, Customer customer)>> LoadOrderRequiredContexts(Guid orderId)
 		{
