@@ -32,10 +32,12 @@ namespace Infrastructure.DataManagements.MultiTenancyServices.TenantRegistry
 				{
 					Id = x.Id,
 					Name = x.TenantName,
-					ConnectionString = x.ConnectionString
+					ConnectionString = x.ConnectionString,
+					IsEnable = x.IsEnable,
 				}).ToListAsync();
 		}
 
 		public TenantInfoDto? Find(Guid id) => _tenants.Find(x => x.Id == id);
+		public TenantInfoDto? Find(string tenantName) => _tenants.Find(x => x.Name == tenantName);
 	}
 }

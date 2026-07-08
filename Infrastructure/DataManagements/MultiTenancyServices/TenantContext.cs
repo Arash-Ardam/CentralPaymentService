@@ -1,22 +1,21 @@
 ﻿using Application.Accounting.CustomerApp.Dtos;
 using Application.OrderManagement.Services;
-using Infrastructure.DataManagements.Abstractions.ORMs;
+using Infrastructure.DataManagements.MultiTenancyServices.TenantRegistry;
 using Microsoft.AspNetCore.Http;
-using Microsoft.EntityFrameworkCore;
 
 internal class TenantContext : ITenantContext
 {
-	private readonly AdminEfCoreDbContext _dbContext;
+	private readonly ITenantRegistryService _tenantRegistryService;
 	private readonly IHttpContextAccessor _httpContextAccessor;
 
 	public CustomerInfoDto? Current { get; private set; }
 
 	public TenantContext(
-		AdminEfCoreDbContext dbContext,
-		IHttpContextAccessor httpContextAccessor)
+		IHttpContextAccessor httpContextAccessor,
+		ITenantRegistryService tenantRegistryService)
 	{
-		_dbContext = dbContext;
 		_httpContextAccessor = httpContextAccessor;
+		_tenantRegistryService = tenantRegistryService;
 	}
 
 	public void SetTenantByUser()
@@ -41,21 +40,18 @@ internal class TenantContext : ITenantContext
 
 	private CustomerInfoDto LoadTenant(string tenantName)
 	{
-		var customer = _dbContext.Customers
-			.AsNoTracking()
-			.Where(c => c.TenantName == tenantName)
-			.Select(c => new CustomerInfoDto
-			{
-				Id = c.Id,
-				TenantName = c.TenantName,
-				ConnectionString = c.ConnectionString,
-				IsEnable = c.IsEnable
-			})
-			.FirstOrDefault();
+		var customer = _tenantRegistryService
+			.Find(tenantName);
 
 		if (customer is null)
 			throw new ArgumentException($"Tenant '{tenantName}' not found");
 
-		return customer;
+		return new CustomerInfoDto
+		{
+			Id = customer.Id,
+			TenantName = customer.Name,
+			ConnectionString = customer.ConnectionString,
+			IsEnable = customer.IsEnable
+		};
 	}
 }

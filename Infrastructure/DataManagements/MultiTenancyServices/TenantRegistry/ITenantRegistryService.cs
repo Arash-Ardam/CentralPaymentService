@@ -8,5 +8,7 @@ namespace Infrastructure.DataManagements.MultiTenancyServices.TenantRegistry
 		IReadOnlyList<TenantInfoDto> GetAll();
 
 		TenantInfoDto? Find(Guid id);
+
+		TenantInfoDto? Find(string tenantName);
 	}
 }
