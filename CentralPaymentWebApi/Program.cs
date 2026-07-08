@@ -2,8 +2,10 @@ using Application;
 using CentralPaymentWebApi.Configurations.Identity;
 using CentralPaymentWebApi.Configurations.OpenApi;
 using CentralPaymentWebApi.Middlewares;
+using CentralPaymentWebApi.MinimalApis;
 using Infrastructure.DataManagements;
 using Infrastructure.Services;
+using Microsoft.AspNetCore.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -11,11 +13,18 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
-builder.Services.AddControllers()
-	.AddJsonOptions(opts =>
-	{
-		opts.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase, allowIntegerValues: true));
-	});
+//builder.Services.AddControllers()
+//	.AddJsonOptions(opts =>
+//	{
+//		opts.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase, allowIntegerValues: true));
+//	});
+
+builder.Services.Configure<JsonOptions>(options =>
+{
+	options.SerializerOptions.Converters.Add(
+		new JsonStringEnumConverter(JsonNamingPolicy.CamelCase, allowIntegerValues: false));
+});
+
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddDataManagements(builder.Configuration);
@@ -40,6 +49,9 @@ if (app.Environment.IsDevelopment())
 
 app.UseMiddleware<TenantContextMiddleware>();
 
-app.MapControllers();
+//app.MapControllers();
+
+app.MapAccountingApis();
+app.MapPaymentApis();
 
 app.Run();
