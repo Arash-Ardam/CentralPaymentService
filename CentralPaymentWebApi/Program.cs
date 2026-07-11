@@ -53,5 +53,6 @@ app.UseMiddleware<TenantContextMiddleware>();
 
 app.MapAccountingApis();
 app.MapPaymentApis();
+app.MapAdministratorApis();
 
 app.Run();

@@ -1,5 +1,6 @@
 ﻿using CentralPaymentWebApi.Abstractions;
 using CentralPaymentWebApi.MinimalApis.Accounting;
+using CentralPaymentWebApi.MinimalApis.Administrator;
 using CentralPaymentWebApi.MinimalApis.Payment;
 
 namespace CentralPaymentWebApi.MinimalApis
@@ -40,6 +41,25 @@ namespace CentralPaymentWebApi.MinimalApis
 				.MapSinglePaymentApis()
 				.RequireAuthorization(AuthorizationConsts.UserPolicy)
 				.WithRequestTimeout(timeout: TimeSpan.FromSeconds(60));
+
+			app
+				.MapGroup("api/payments/grouped")
+				.WithTags("GroupedPaymentOrders")
+				.WithSummary("this is set of apis for managing grouped payment orders")
+				.MapGroupedPaymentApis()
+				.RequireAuthorization(AuthorizationConsts.UserPolicy)
+				.WithRequestTimeout(timeout: TimeSpan.FromSeconds(90));
+		}
+
+		public static void MapAdministratorApis(this WebApplication app)
+		{
+			app
+				.MapGroup("api/admin/reports")
+				.WithTags("AdminReports")
+				.WithSummary("this is set of apis for managing reports for admin")
+				.MapReportApis()
+				.RequireAuthorization(AuthorizationConsts.AdminPolicy)
+				.WithRequestTimeout(timeout: TimeSpan.FromSeconds(30));
 		}
 	}
 }

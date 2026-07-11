@@ -212,7 +212,7 @@ namespace CentralPaymentWebApi.Controllers.Payment
 		/// <param name="transactionOrderId"></param>
 		/// <returns></returns>
 		[HttpGet("{orderId}/transaction/{transactionOrderId}/report")]
-		[ProducesResponseType(StatusCodes.Status202Accepted, Type = typeof(GroupedOrderReportDto))]
+		[ProducesResponseType(StatusCodes.Status202Accepted, Type = typeof(GroupedOrderTransactionReportDto))]
 		[ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(string))]
 		[ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(string))]
 		[ProducesResponseType(StatusCodes.Status500InternalServerError, Type = typeof(string))]
