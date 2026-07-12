@@ -1,4 +1,5 @@
 ﻿using Application.Abstractions;
+using Application.Accounting.AccountApp.Dtos;
 using Application.OrderManagement.Dtos.GroupedOrder;
 
 namespace Application.OrderManagement
@@ -15,5 +16,6 @@ namespace Application.OrderManagement
 		Task<ApplicationResponse> InquiryPaymentTransaction(Guid orderId, Guid transactionId);
 		Task<ApplicationResponse<GroupedOrderReportDto>> ReportOrderAsync(string orderId);
 		Task<ApplicationResponse<GroupedOrderTransactionReportDto>> ReportTrasnactionAsync(string orderId, string transactionOrderId);
+		Task<ApplicationResponse<List<AccountInfoDto>>> GetActiveAccounts();
 	}
 }

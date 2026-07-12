@@ -10,6 +10,7 @@ namespace Application.OrderManagement.Dtos.GroupedOrder
 
 		public long Amount { get; set; }
 		public string Description { get; set; } = string.Empty;
+		public TransactionType Type { get; set; }
 		public GroupedTransactionStatus Status { get; set; }
 
 		public string FullName { get; set; } = string.Empty;

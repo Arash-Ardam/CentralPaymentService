@@ -1,4 +1,5 @@
 ﻿using Application.Abstractions;
+using Application.Accounting.AccountApp.Dtos;
 using Application.OrderManagement.Dtos.SingleOrder;
 
 namespace Application.OrderManagement
@@ -13,5 +14,6 @@ namespace Application.OrderManagement
 		Task<ApplicationResponse> InquiryPaymentOrder(Guid orderId);
 
 		Task<ApplicationResponse<SingleOrderReportDto>> ReportAsync(string orderId);
+		Task<ApplicationResponse<List<AccountInfoDto>>> GetActiveAccounts(); 
 	}
 }

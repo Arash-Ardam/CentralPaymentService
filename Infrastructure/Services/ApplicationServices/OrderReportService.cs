@@ -36,6 +36,7 @@ namespace Infrastructure.Services.ApplicationServices
 					TrackingCode = trxRep.TrackingCode,
 					Amount = trxRep.Amount,
 					Description = trxRep.Description,
+					Type = trxRep.Type,
 					Iban = trxRep.Iban,
 					OrderId = trxRep.OrderId,
 					Status = trxRep.Status
@@ -54,7 +55,8 @@ namespace Infrastructure.Services.ApplicationServices
 				Description = rep.Description,
 				Iban = rep.Iban,
 				OrderId = rep.OrderId,
-				Status = rep.Status
+				Status = rep.Status,
+				Type = rep.Type
 			}).FirstOrDefaultAsync();
 		
 

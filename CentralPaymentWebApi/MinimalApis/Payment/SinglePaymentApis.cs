@@ -1,4 +1,5 @@
-﻿using Application.OrderManagement;
+﻿using Application.Accounting.AccountApp.Dtos;
+using Application.OrderManagement;
 using Application.OrderManagement.Dtos.SingleOrder;
 using CentralPaymentWebApi.Abstractions;
 using Microsoft.AspNetCore.Mvc;
@@ -152,6 +153,27 @@ namespace CentralPaymentWebApi.MinimalApis.Payment
 				.WithSummary("گزارش دستور پرداخت تکی")
 				.WithDescription("این متد گزارش دستور پرداخت با توجه به شماره پرداخت را ارائه می دهد")
 				.Produces<SingleOrderReportDto>(StatusCodes.Status200OK)
+				.Produces<string>(StatusCodes.Status404NotFound)
+				.Produces<string>(StatusCodes.Status400BadRequest)
+				.Produces<string>(StatusCodes.Status500InternalServerError);
+
+			group
+				.MapGet("getActiveAccounts", async Task<IResult> (ISingleOrderApplication singleorderApp) =>
+				{
+					try
+					{
+						var appResponse = await singleorderApp.GetActiveAccounts();
+						return appResponse.HandleOutput();
+					}
+					catch (Exception ex)
+					{
+						return Results.InternalServerError(ex.Message);
+					}
+				})
+				.WithDisplayName("Report")
+				.WithSummary("واگشی حساب های فعال دارای سرویس پرداخت تکی")
+				.WithDescription("این متد حساب های فعالی که دارای سرویس پرداخت تکی هستند را خروجی می دهد")
+				.Produces<List<AccountInfoDto>>(StatusCodes.Status200OK)
 				.Produces<string>(StatusCodes.Status404NotFound)
 				.Produces<string>(StatusCodes.Status400BadRequest)
 				.Produces<string>(StatusCodes.Status500InternalServerError);

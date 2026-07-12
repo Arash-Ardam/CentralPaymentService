@@ -1,6 +1,8 @@
 ﻿using Application.Abstractions;
 using Application.Abstractions.Dtos;
 using Application.Abstractions.Services;
+using Application.Accounting.AccountApp.Dtos;
+using Application.Accounting.AccountApp.Services;
 using Application.OrderManagement.Dtos.SingleOrder;
 using Application.OrderManagement.Enums;
 using Application.OrderManagement.Mappings;
@@ -24,6 +26,8 @@ namespace Application.OrderManagement
 		private readonly IUnitOfWork _unitOfWork;
 		private readonly IOrderReportService _reportService;
 		private readonly IPaymentServicesFactory _paymentServiceFactory;
+		private readonly IAccountQueryService _accountQueryService;
+		private readonly ITenantContext _tenantContext;
 
 		public SingleOrderApplication(IAccountRepository accountRespository,
 							 IOrderRepository orderRepository,
@@ -33,7 +37,9 @@ namespace Application.OrderManagement
 							 IPaymentPolicyService paymentPolicyService,
 							 IOutboxMessageService outboxMessageService,
 							 IOrderReportService reportService,
-							 IUnitOfWork unitOfWork)
+							 IUnitOfWork unitOfWork,
+							 IAccountQueryService accountQueryService,
+							 ITenantContext tenantContext)
 		{
 			_accountRepository = accountRespository ?? throw new ArgumentNullException(nameof(accountRespository));
 			_orderRepository = orderRepository ?? throw new ArgumentNullException(nameof(orderRepository));
@@ -43,6 +49,8 @@ namespace Application.OrderManagement
 			_outboxMessageService = outboxMessageService ?? throw new ArgumentNullException(nameof(outboxMessageService));
 			_reportService = reportService ?? throw new ArgumentNullException(nameof(reportService));
 			_unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+			_accountQueryService = accountQueryService ?? throw new ArgumentNullException(nameof(accountQueryService));
+			_tenantContext = tenantContext ?? throw new ArgumentNullException(nameof(tenantContext));
 		}
 
 		public async Task<ApplicationResponse<Guid>> CreateAsync(CreateSingleOrderDto orderDto)
@@ -356,6 +364,35 @@ namespace Application.OrderManagement
 			}
 		}
 
+		public async Task<ApplicationResponse<List<AccountInfoDto>>> GetActiveAccounts()
+		{
+			var response = new ApplicationResponse<List<AccountInfoDto>>() { IsSuccess = true };
+			try
+			{
+				var accounts = await _accountQueryService.GetAllActiveForSinglePaymentAsync(_tenantContext.Current.Id);
+
+				if (accounts is null)
+				{
+					response.IsSuccess = false;
+					response.Status = ApplicationResultStatus.NotFound;
+					response.Message = "there is no account for single payment service";
+					return response;
+				}
+
+				response.Data = accounts;
+				response.Status = ApplicationResultStatus.Done;
+				return response;
+			}
+			catch (Exception ex)
+			{
+				response.IsSuccess = false;
+				response.Status = ApplicationResultStatus.Exception;
+				response.Message = ex.Message;
+				return response;
+			}
+		}
+
+
 		private async Task PublishEvent(Order targerOrder,OrderStatus status,OutboxBehaviorType type)
 		{
 			var outbox = await _outboxMessageService.FindAsync(targerOrder.OrderId);
@@ -426,6 +463,6 @@ namespace Application.OrderManagement
 			};
 		}
 
-	
+
 	}
 }

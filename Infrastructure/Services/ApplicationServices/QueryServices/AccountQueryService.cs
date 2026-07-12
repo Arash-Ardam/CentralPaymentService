@@ -1,5 +1,7 @@
 ﻿using Application.Accounting.AccountApp.Dtos;
 using Application.Accounting.AccountApp.Services;
+using Domain.Banking.Bank;
+using Domain.Customer;
 using Infrastructure.DataManagements.Abstractions.ORMs;
 using Microsoft.EntityFrameworkCore;
 
@@ -62,6 +64,40 @@ namespace Infrastructure.Services.ApplicationServices.QueryServices
 			).ToListAsync();
 		}
 
+		public async Task<List<AccountInfoDto>> GetAllActiveForSinglePaymentAsync(Guid tenantId)
+		{
+			return await 
+				(
+				from account in _dbContext.Accounts 
+				join bank in _dbContext.Banks
+				on account.BankId equals bank.Id
+				where account.CustomerId == tenantId && 
+					  account.PaymentSettings.Single != null &&
+					  account.IsEnable == true
+				select new AccountInfoDto
+				{
+					Id = account.Id,
+					AccountNumber = account.AccountNumber,
+					Iban = account.Iban,
+					ExpirationDate = account.ExpirationDate.Value,
+					Status = account.IsEnable,
+
+					BankName = bank.Name,
+
+					SingleService = new SingleSettingsInfoDto
+					{
+						TerminalId = account.PaymentSettings.Single.TerminalId,
+						MerchantId = account.PaymentSettings.Single.MerchantId,
+						Username = account.PaymentSettings.Single.Username,
+						Password = account.PaymentSettings.Single.Password,
+						ExpireDate = account.PaymentSettings.Single.ContractExpire,
+						Status = account.PaymentSettings.Single.IsEnable
+					}
+				}
+			)
+			.ToListAsync();
+		}
+
 		public async Task<AccountInfoDto?> GetAsync(Guid accountId)
 		{
 			return await
@@ -108,6 +144,39 @@ namespace Infrastructure.Services.ApplicationServices.QueryServices
 		public Task<bool> IsExists(string accountNubmer, string accountIban)
 		{
 			return _dbContext.Accounts.AsNoTracking().AnyAsync(acc => acc.AccountNumber == accountNubmer && acc.Iban == accountIban);
+		}
+
+		public async Task<List<AccountInfoDto>> GetAllActiveForGroupedPaymentAsync(Guid tenantId)
+		{
+			return await
+				(
+				from account in _dbContext.Accounts
+				join bank in _dbContext.Banks
+				on account.BankId equals bank.Id
+				where account.CustomerId == tenantId &&
+					  account.PaymentSettings.Batch != null &&
+					  account.IsEnable == true
+				select new AccountInfoDto
+				{
+					Id = account.Id,
+					AccountNumber = account.AccountNumber,
+					Iban = account.Iban,
+					ExpirationDate = account.ExpirationDate.Value,
+					Status = account.IsEnable,
+
+					BankName = bank.Name,
+
+					BatchService = new BatchSettingsInfoDto
+						{
+							MaxDailyAmount = account.PaymentSettings.Batch.MaxDailyAmount,
+							MaxTransactionsCount = account.PaymentSettings.Batch.MaxTransactionsCount,
+							MinSatnaAmount = account.PaymentSettings.Batch.MinSatnaAmount,
+							ExpireDate = account.PaymentSettings.Batch.ContractExpire,
+							Status = account.PaymentSettings.Batch.IsEnable
+						}
+				}
+			)
+			.ToListAsync();
 		}
 	}
 }

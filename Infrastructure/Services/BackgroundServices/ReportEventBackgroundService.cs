@@ -266,6 +266,7 @@ namespace Infrastructure.Services.BackgroundServices
 								Iban = trx.Specs.Iban,
 								Description = trx.Specs.Description,
 								Amount = trx.Specs.Amount,
+								Type = trx.Specs.TransactionType,
 								FullName = $"{trx.Specs.FirstName} {trx.Specs.LastName}".Trim(),
 								TrackingCode = trx.TrackingId,
 								WithdrawalOrderId = report.OrderId

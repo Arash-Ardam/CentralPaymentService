@@ -4,6 +4,7 @@ using Infrastructure.DataManagements.Abstractions.ORMs;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Migrations.TenantEfCoreDb
 {
     [DbContext(typeof(TenantEfCoreDbContext))]
-    partial class TenantEfCoreDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260712050417_GroupdTranactions_Report_Add_TransactionType")]
+    partial class GroupdTranactions_Report_Add_TransactionType
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

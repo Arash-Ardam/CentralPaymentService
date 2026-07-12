@@ -1,4 +1,5 @@
-﻿using Application.OrderManagement;
+﻿using Application.Accounting.AccountApp.Dtos;
+using Application.OrderManagement;
 using Application.OrderManagement.Dtos.GroupedOrder;
 using CentralPaymentWebApi.Abstractions;
 using Microsoft.AspNetCore.Mvc;
@@ -158,11 +159,11 @@ namespace CentralPaymentWebApi.MinimalApis.Payment
 			.Produces<string>(StatusCodes.Status500InternalServerError);
 
 			group
-				.MapGet("{orderId:guid}/report", async Task<IResult> (IGroupedOrderApplication app, [FromRoute] Guid orderId) =>
+				.MapGet("{orderId}/report", async Task<IResult> (IGroupedOrderApplication app, [FromRoute] string orderId) =>
 				{
 					try
 					{
-						var appResponse = await app.ReportOrderAsync(orderId.ToString());
+						var appResponse = await app.ReportOrderAsync(orderId);
 						return appResponse.HandleOutput();
 					}
 					catch (Exception ex)
@@ -178,11 +179,11 @@ namespace CentralPaymentWebApi.MinimalApis.Payment
 				.Produces<string>(StatusCodes.Status404NotFound)
 				.Produces<string>(StatusCodes.Status500InternalServerError);
 
-			group.MapGet("{orderId:guid}/transacions/{transactionOrderId:guid}/report", async Task<IResult> (IGroupedOrderApplication app, [FromRoute] Guid orderId, [FromRoute] Guid transactionOrderId) =>
+			group.MapGet("{orderId}/transacions/{transactionOrderId}/report", async Task<IResult> (IGroupedOrderApplication app, [FromRoute] string orderId, [FromRoute] string transactionOrderId) =>
 			{
 				try
 				{
-					var appResponse = await app.ReportTrasnactionAsync(orderId.ToString(), transactionOrderId.ToString());
+					var appResponse = await app.ReportTrasnactionAsync(orderId, transactionOrderId);
 					return appResponse.HandleOutput();
 				}
 				catch (Exception ex)
@@ -197,6 +198,27 @@ namespace CentralPaymentWebApi.MinimalApis.Payment
 			.Produces<string>(StatusCodes.Status400BadRequest)
 			.Produces<string>(StatusCodes.Status404NotFound)
 			.Produces<string>(StatusCodes.Status500InternalServerError);
+
+			group
+				.MapGet("getActiveAccounts", async Task<IResult> (IGroupedOrderApplication app) =>
+				{
+					try
+					{
+						var appResponse = await app.GetActiveAccounts();
+						return appResponse.HandleOutput();
+					}
+					catch (Exception ex)
+					{
+						return Results.InternalServerError(ex.Message);
+					}
+				})
+				.WithDisplayName("Report")
+				.WithSummary("واگشی حساب های فعال دارای سرویس پرداخت گروهی")
+				.WithDescription("این متد حساب های فعالی که دارای سرویس پرداخت گروهی هستند را خروجی می دهد")
+				.Produces<List<AccountInfoDto>>(StatusCodes.Status200OK)
+				.Produces<string>(StatusCodes.Status404NotFound)
+				.Produces<string>(StatusCodes.Status400BadRequest)
+				.Produces<string>(StatusCodes.Status500InternalServerError);
 
 			return group;
 		}

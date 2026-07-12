@@ -1,6 +1,8 @@
 ﻿using Application.Abstractions;
 using Application.Abstractions.Dtos;
 using Application.Abstractions.Services;
+using Application.Accounting.AccountApp.Dtos;
+using Application.Accounting.AccountApp.Services;
 using Application.OrderManagement.Dtos.GroupedOrder;
 using Application.OrderManagement.Enums;
 using Application.OrderManagement.Mappings;
@@ -23,8 +25,10 @@ internal class GroupedOrderApplication : IGroupedOrderApplication
 	private readonly IPaymentServicesFactory _paymentServiceFactory;
 	private readonly IPaymentPolicyService _paymentPolicyService;
 	private readonly IOrderReportService _reportService;
+	private readonly IAccountQueryService _accountQueryService;
 	private readonly IOutboxMessageService _outboxMessageService;
 	private readonly IUnitOfWork _unitOfWork;
+	private readonly ITenantContext _tenantContext;
 	public GroupedOrderApplication(IAccountRepository accountRespository,
 						 IOrderRepository orderRepository,
 						 ICustomerRepository customerRepository,
@@ -33,7 +37,9 @@ internal class GroupedOrderApplication : IGroupedOrderApplication
 						 IPaymentPolicyService paymentPolicyService,
 						 IUnitOfWork unitOfWork,
 						 IOrderReportService reportService,
-						 IOutboxMessageService outboxMessageService)
+						 IOutboxMessageService outboxMessageService,
+						 ITenantContext tenantContext,
+						 IAccountQueryService accountQueryService)
 	{
 		_accountRepository = accountRespository ?? throw new ArgumentNullException(nameof(accountRespository));
 		_orderRepository = orderRepository ?? throw new ArgumentNullException(nameof(orderRepository));
@@ -44,6 +50,8 @@ internal class GroupedOrderApplication : IGroupedOrderApplication
 		_unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
 		_reportService = reportService ?? throw new ArgumentNullException(nameof(reportService));
 		_outboxMessageService = outboxMessageService ?? throw new ArgumentNullException(nameof(outboxMessageService));
+		_tenantContext = tenantContext ?? throw new ArgumentNullException(nameof(tenantContext));
+		_accountQueryService = accountQueryService ?? throw new ArgumentNullException(nameof(accountQueryService));
 	}
 
 	public async Task<ApplicationResponse<Guid>> CreateAsync(CreateGroupedOrderDto orderDto)
@@ -461,6 +469,34 @@ internal class GroupedOrderApplication : IGroupedOrderApplication
 		}
 	}
 
+	public async Task<ApplicationResponse<List<AccountInfoDto>>> GetActiveAccounts()
+	{
+		var response = new ApplicationResponse<List<AccountInfoDto>>() { IsSuccess = true };
+		try
+		{
+			var accounts = await _accountQueryService.GetAllActiveForGroupedPaymentAsync(_tenantContext.Current.Id);
+
+			if (accounts is null)
+			{
+				response.IsSuccess = false;
+				response.Status = ApplicationResultStatus.NotFound;
+				response.Message = "there is no account for single payment service";
+				return response;
+			}
+
+			response.Data = accounts;
+			response.Status = ApplicationResultStatus.Done;
+			return response;
+		}
+		catch (Exception ex)
+		{
+			response.IsSuccess = false;
+			response.Status = ApplicationResultStatus.Exception;
+			response.Message = ex.Message;
+			return response;
+		}
+	}
+
 	private TransactionType IdentifyTransactionType(Account sourceAccount, long Amount, string accountNumber)
 	{
 		var matchedSourceAccountParams = sourceAccount.AccountNumber[^4..];
@@ -540,4 +576,5 @@ internal class GroupedOrderApplication : IGroupedOrderApplication
 		return (targetOrder, bank, account, customer);
 	}
 
+	
 }
