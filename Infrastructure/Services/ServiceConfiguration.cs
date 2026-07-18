@@ -11,6 +11,7 @@ using Infrastructure.Services.ApplicationServices.EventServices;
 using Infrastructure.Services.ApplicationServices.PaymentServices.PSP;
 using Infrastructure.Services.ApplicationServices.QueryServices;
 using Infrastructure.Services.BackgroundServices;
+using Infrastructure.Services.Idempotency;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -43,12 +44,16 @@ namespace Infrastructure.Services
 			services.AddScoped<IPSPPaymentService, SamanPSPService>();
 			#endregion
 
-			// added tools services
-			services.AddScoped<IUnitOfWork, DbUnitOfWork>();
+			#region Tools Services
 
+			services.AddScoped<IUnitOfWork, DbUnitOfWork>();
+			services.AddScoped<IIdempotencyService, IdempotencyService>();
+
+			#endregion
 			#region BackgroundServices
 			services.AddHostedService<ReportEventBackgroundService>();
 			services.AddHostedService<CustomerEventsBackgroundService>();
+			services.AddHostedService<IdempotencyExpirationBackgroundService>();
 			#endregion
 
 			services.AddAutoMapper(config => config.AddMaps(typeof(MapperBase).Assembly));

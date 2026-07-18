@@ -20,9 +20,11 @@ namespace Infrastructure.DataManagements.Repositories
 			return order;
 		}
 
-		public Task DeleteOrderAsync(string orderId)
+		public async Task DeleteOrderAsync(string orderId)
 		{
-			throw new NotImplementedException();
+			var model = await _dbContext.Orders.FirstOrDefaultAsync(x => x.OrderId == orderId);
+			if(model != null) 
+				_dbContext.Orders.Remove(model);
 		}
 
 		public Task<List<Order>> GetAllOrdersAsync()

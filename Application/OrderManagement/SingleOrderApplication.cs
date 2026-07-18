@@ -12,6 +12,7 @@ using Domain.Banking.Bank;
 using Domain.Customer;
 using Domain.Order;
 using Domain.Order.Enums;
+using System.Linq.Expressions;
 using System.Text.Json;
 
 namespace Application.OrderManagement
@@ -58,41 +59,24 @@ namespace Application.OrderManagement
 			var response = new ApplicationResponse<Guid>() { IsSuccess = true };
 			try
 			{
-				var targetAccount = await _accountRepository.GetAsync(orderDto.AccountId);
-				if (targetAccount is null)
+				var validationResponse = await ValidateOrderCreation(orderDto);
+				if (validationResponse.IsFailed)
 				{
-					response.IsSuccess = false;
-					response.Status = ApplicationResultStatus.NotFound;
-					response.Message = $"target account with id:{orderDto.AccountId} not found";
+					response.IsSuccess = validationResponse.IsSuccess;
+					response.Status = validationResponse.Status;
+					response.Message = validationResponse.Message;
 					return response;
 				}
 
-				var bank = await _bankRepository.GetAsync(targetAccount.BankId);
-				if (bank is null)
-				{
-					response.IsSuccess = false;
-					response.Status = ApplicationResultStatus.NotFound;
-					response.Message = $"Invalid bank";
-					return response;
-				}
-
-				var customer = await _customerRepository.GetAsync(targetAccount.CustomerId);
-				if (customer is null)
-				{
-					response.IsSuccess = false;
-					response.Status = ApplicationResultStatus.NotFound;
-					response.Message = $"Invalid customer";
-					return response;
-				}
-
-				bank.EnsureHasSingleService();
-				targetAccount.EnsureSingleServiceAvailable();
-
+				var (targetAccount, customer) = validationResponse.Data;
 				var order = OrderFactory.CreateSingle(targetAccount.Id, orderDto.Amount, orderDto.Description);
 				var result = await _orderRepository.CreateAsync(order);
 
 				await PublishEvent(customer, targetAccount, order);
+
+				// order publish consistency
 				await _unitOfWork.SaveTenantChangesAsync();
+				await _unitOfWork.SaveAdminChangesAsync();
 
 				response.Data = result.Id;
 				response.Status = ApplicationResultStatus.Created;
@@ -408,7 +392,6 @@ namespace Application.OrderManagement
 					Payload = Enum.GetName(typeof(OrderStatus),status)	
 				});
 
-				await _unitOfWork.SaveAdminChangesAsync();
 			}
 		}
 
@@ -435,7 +418,6 @@ namespace Application.OrderManagement
 				TenantName =customer.TenantName
 			});
 
-			await _unitOfWork.SaveAdminChangesAsync();
 			
 		}
 		private async Task<ApplicationResponse<(Order order, Bank bank, Account account, Customer customer)>> LoadOrderRequiredContexts(Guid orderId)
@@ -461,6 +443,59 @@ namespace Application.OrderManagement
 				Data = (targetOrder, bank, account, customer),
 				IsSuccess = true
 			};
+		}
+
+
+		private async Task<ApplicationResponse<(Account TargetAccount,Customer TargetCustomer)>> ValidateOrderCreation(CreateSingleOrderDto orderDto)
+		{
+			var response = new ApplicationResponse<(Account TargetAccount, Customer TargetCustomer)>() { IsSuccess = true };
+
+			var targetAccount = await _accountRepository.GetAsync(orderDto.AccountId);
+			if (targetAccount is null)
+			{
+				response.IsSuccess = false;
+				response.Status = ApplicationResultStatus.NotFound;
+				response.Message = $"target account with id:{orderDto.AccountId} not found";
+				return response;
+			}
+
+			var bank = await _bankRepository.GetAsync(targetAccount.BankId);
+			if (bank is null)
+			{
+				response.IsSuccess = false;
+				response.Status = ApplicationResultStatus.NotFound;
+				response.Message = $"Invalid bank";
+				return response;
+			}
+
+			var customer = await _customerRepository.GetAsync(targetAccount.CustomerId);
+			if (customer is null)
+			{
+				response.IsSuccess = false;
+				response.Status = ApplicationResultStatus.NotFound;
+				response.Message = $"Invalid customer";
+				return response;
+			}
+
+			var serviceValidation = bank.CheckSingleService();
+			if (!serviceValidation.HasService)
+			{
+				response.IsSuccess = false;
+				response.Status = ApplicationResultStatus.ValidationError;
+				response.Message = serviceValidation.Message;
+				return response;
+			}
+
+			var singleServiceValidation = targetAccount.EnsureSingleServiceAvailable();
+			if (!singleServiceValidation.IsAvailable)
+			{
+				response.IsSuccess = false;
+				response.Status = ApplicationResultStatus.ValidationError;
+				response.Message = singleServiceValidation.Message;
+				return response;
+			}
+
+			return response;
 		}
 
 

@@ -41,13 +41,15 @@ public class Bank
 			throw new ArgumentException("No Grouped payment service for account bank");
 	}
 
-	public void EnsureHasSingleService()
+	public (bool HasService,string Message) CheckSingleService()
 	{
 		if (!isEnable)
-			throw new ArgumentException("Bank is disabled");
+			return (false, "Bank is disabled");
 
 		if (!ServiceTypes.Contains(Enums.ServiceTypes.Single))
-			throw new ArgumentException("No Single payment service exists for account bank");
+			return (false, "No Single payment service exists for account bank");
+
+		return (true, "Single payment service is available");
 	}
 
 }

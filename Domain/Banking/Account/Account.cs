@@ -42,16 +42,18 @@ public class Account
 			throw new ArgumentException("The service is expired");
 	}
 
-	public void EnsureSingleServiceAvailable()
+	public (bool IsAvailable, string Message) EnsureSingleServiceAvailable()
 	{
 		if (PaymentSettings.Single is null)
-			throw new ArgumentException("No Bank Single payment service is assinged to account");
+			return (false, "Bank Single payment service is not available for target account");
 
 		if (!PaymentSettings.Single.IsEnable)
-			throw new ArgumentException("Bank Single payment service is not enable for target account");
+			return (false, "Bank Single payment service is not enable for target account");
 
 		if (PaymentSettings.Single.ContractExpire < DateTimeOffset.Now)
-			throw new ArgumentException("Bank Single payment service is expired for target account");
+			return (false, "Bank Single payment service is expired for target account");
+
+		return (true, "Bank Single payment service is available for target account");
 	}
 
 }

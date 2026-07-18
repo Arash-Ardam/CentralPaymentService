@@ -1,8 +1,13 @@
-﻿using Application.Accounting.AccountApp.Dtos;
+﻿using Application.Abstractions;
+using Application.Accounting.AccountApp.Dtos;
 using Application.OrderManagement;
 using Application.OrderManagement.Dtos.SingleOrder;
+using Application.OrderManagement.Services;
 using CentralPaymentWebApi.Abstractions;
+using Infrastructure.Helpers;
+using Infrastructure.Services.Idempotency;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 
 namespace CentralPaymentWebApi.MinimalApis.Payment
 {
@@ -11,12 +16,35 @@ namespace CentralPaymentWebApi.MinimalApis.Payment
 		public static RouteGroupBuilder MapSinglePaymentApis(this RouteGroupBuilder group)
 		{
 			group
-				.MapPost(RouteTemplates.Create, async Task<IResult> (ISingleOrderApplication singleorderApp, [FromBody] CreateSingleOrderDto dto) =>
+				.MapPost(RouteTemplates.Create, async Task<IResult> (
+					ITenantContext tenantContext,
+					IIdempotencyService idempotencyService,
+					ISingleOrderApplication singleorderApp,
+					[FromBody] CreateSingleOrderDto dto) =>
 				{
 					try
 					{
+						var idempotentRequest = await idempotencyService.AddIdempotentRequest(new CreateIdempotencyRequestDto
+						{
+							Key = $"{tenantContext.Current.TenantName}_{HashConvertor.ConvertToHash(dto)}",
+							RequestBody = JsonSerializer.Serialize(dto),
+						});
+
+
 						var appResponse = await singleorderApp.CreateAsync(dto);
-						return appResponse.HandleOutput();
+						var (idempotencyDto,response) = appResponse.HandleIdempotencyResponse();
+
+						await idempotencyService.UpdateIdempotentRequest(new UpdateIdempotencyRequestDto
+						{
+							Id = idempotentRequest.Id,
+							Key = idempotentRequest.Key,
+							RequestBody = idempotentRequest.RequestBody,
+							ResponseBody = idempotencyDto.ResponseBody,
+							Status = idempotencyDto.Status,
+							StatusCode = idempotencyDto.StatusCode
+						});
+
+						return response;
 					}
 					catch (Exception ex)
 					{
@@ -180,5 +208,8 @@ namespace CentralPaymentWebApi.MinimalApis.Payment
 
 			return group;
 		}
+
+
+		
 	}
 }
