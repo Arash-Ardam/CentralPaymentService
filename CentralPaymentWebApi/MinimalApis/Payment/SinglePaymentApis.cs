@@ -4,6 +4,7 @@ using Application.OrderManagement;
 using Application.OrderManagement.Dtos.SingleOrder;
 using Application.OrderManagement.Services;
 using CentralPaymentWebApi.Abstractions;
+using CentralPaymentWebApi.Configurations.EndpointsFilter;
 using Infrastructure.Helpers;
 using Infrastructure.Services.Idempotency;
 using Microsoft.AspNetCore.Mvc;
@@ -16,44 +17,35 @@ namespace CentralPaymentWebApi.MinimalApis.Payment
 		public static RouteGroupBuilder MapSinglePaymentApis(this RouteGroupBuilder group)
 		{
 			group
-				.MapPost(RouteTemplates.Create, async Task<IResult> (
-					ITenantContext tenantContext,
+				.MapPost(RouteTemplates.Create, async Task<ApiResponse<Guid>> (
 					IIdempotencyService idempotencyService,
+					IHttpContextAccessor contextAccessor,
 					ISingleOrderApplication singleorderApp,
 					[FromBody] CreateSingleOrderDto dto) =>
 				{
 					try
 					{
-						var idempotentRequest = await idempotencyService.AddIdempotentRequest(new CreateIdempotencyRequestDto
-						{
-							Key = $"{tenantContext.Current.TenantName}_{HashConvertor.ConvertToHash(dto)}",
-							RequestBody = JsonSerializer.Serialize(dto),
-						});
-
-
 						var appResponse = await singleorderApp.CreateAsync(dto);
-						var (idempotencyDto,response) = appResponse.HandleIdempotencyResponse();
-
-						await idempotencyService.UpdateIdempotentRequest(new UpdateIdempotencyRequestDto
-						{
-							Id = idempotentRequest.Id,
-							Key = idempotentRequest.Key,
-							RequestBody = idempotentRequest.RequestBody,
-							ResponseBody = idempotencyDto.ResponseBody,
-							Status = idempotencyDto.Status,
-							StatusCode = idempotencyDto.StatusCode
-						});
-
-						return response;
+						return appResponse.HandleApiResponse();
 					}
 					catch (Exception ex)
 					{
-						return Results.InternalServerError(ex.Message);
+						return new ApiResponse<Guid> 
+						{
+							HttpResult = Results.InternalServerError(ex.Message),
+							AppResponse = new ApplicationResponse<Guid>
+							{
+								IsSuccess = false,
+								Message = ex.Message,
+								Status = ApplicationResultStatus.Exception
+							}
+						};
 					}
 				})
 				.WithDisplayName("CreateSinglePayment")
 				.WithSummary("ایجاد دستور پرداخت تکی جدید")
 				.WithDescription("این متد یک دستور پرداخت تکی جدید با توجه به حساب پرداختی با وضعیت پیش نویس ایجاد می کند")
+				.RequireIdempotency()
 				.Produces(StatusCodes.Status201Created)
 				.Produces<string>(StatusCodes.Status404NotFound)
 				.Produces<string>(StatusCodes.Status400BadRequest)
@@ -120,7 +112,7 @@ namespace CentralPaymentWebApi.MinimalApis.Payment
 				.Produces(StatusCodes.Status202Accepted)
 				.Produces<string>(StatusCodes.Status404NotFound)
 				.Produces<string>(StatusCodes.Status400BadRequest)
-				.Produces<string>(StatusCodes.Status500InternalServerError);	
+				.Produces<string>(StatusCodes.Status500InternalServerError);
 
 			group
 				.MapPost("send/{OrderId:guid}", async Task<IResult> (ISingleOrderApplication singleorderApp, [FromRoute] Guid OrderId) =>
@@ -141,7 +133,7 @@ namespace CentralPaymentWebApi.MinimalApis.Payment
 				.Produces(StatusCodes.Status202Accepted)
 				.Produces<string>(StatusCodes.Status404NotFound)
 				.Produces<string>(StatusCodes.Status400BadRequest)
-				.Produces<string>(StatusCodes.Status500InternalServerError);	
+				.Produces<string>(StatusCodes.Status500InternalServerError);
 
 			group
 				.MapPost("inquiry/{OrderId:guid}", async Task<IResult> (ISingleOrderApplication singleorderApp, [FromRoute] Guid OrderId) =>
@@ -186,19 +178,29 @@ namespace CentralPaymentWebApi.MinimalApis.Payment
 				.Produces<string>(StatusCodes.Status500InternalServerError);
 
 			group
-				.MapGet("getActiveAccounts", async Task<IResult> (ISingleOrderApplication singleorderApp) =>
+				.MapGet("getActiveAccounts", async Task<ApiResponse<List<AccountInfoDto>>> (ISingleOrderApplication singleorderApp) =>
 				{
 					try
 					{
 						var appResponse = await singleorderApp.GetActiveAccounts();
-						return appResponse.HandleOutput();
+						return appResponse.HandleApiResponse();
 					}
 					catch (Exception ex)
 					{
-						return Results.InternalServerError(ex.Message);
+						return new ApiResponse<List<AccountInfoDto>>
+						{
+							HttpResult = Results.InternalServerError(ex.Message),
+							AppResponse = new ApplicationResponse<List<AccountInfoDto>>
+							{
+								IsSuccess = false,
+								Message = ex.Message,
+								Status = ApplicationResultStatus.Exception
+							}
+						};
 					}
 				})
-				.WithDisplayName("Report")
+				.WithApiResponse<List<AccountInfoDto>>()
+				.WithDisplayName("getActiveAccounts")
 				.WithSummary("واگشی حساب های فعال دارای سرویس پرداخت تکی")
 				.WithDescription("این متد حساب های فعالی که دارای سرویس پرداخت تکی هستند را خروجی می دهد")
 				.Produces<List<AccountInfoDto>>(StatusCodes.Status200OK)
@@ -210,6 +212,6 @@ namespace CentralPaymentWebApi.MinimalApis.Payment
 		}
 
 
-		
+
 	}
 }

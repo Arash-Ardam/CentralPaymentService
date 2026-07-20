@@ -21,14 +21,12 @@ namespace Infrastructure.DataManagements.Abstractions.ORMs
 		public DbSet<Account> Accounts => Set<Account>();
 		public DbSet<Customer> Customers => Set<Customer>();
 		public DbSet<OutboxMessageModel> OutboxMessages => Set<OutboxMessageModel>();
-		public DbSet<IdempotencyModel> IdempotencyRequests => Set<IdempotencyModel>();
 		protected override void OnModelCreating(ModelBuilder modelBuilder)
 		{
 			modelBuilder.ApplyConfiguration(new BankDataConfiguration());
 			modelBuilder.ApplyConfiguration(new CustomerDataConfiguration());
 			modelBuilder.ApplyConfiguration(new AccountDataConfiguration());
 			modelBuilder.ApplyConfiguration(new OutboxMessageConfiguration());
-			modelBuilder.ApplyConfiguration(new IdempotencyDataConfiguration());
 
 			base.OnModelCreating(modelBuilder);
 		}

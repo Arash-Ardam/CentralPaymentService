@@ -32,13 +32,15 @@ public class Bank
 
 	public void ChangeStatus(bool status) => isEnable = status;
 
-	public void EnsureHasGroupedService()
+	public (bool HasService,string ErrMessage) EnsureHasGroupedService()
 	{
 		if(!isEnable)
-			throw new ArgumentException("Bank is disabled");
+			return (false, "Bank is disabled");
 
 		if (!ServiceTypes.Contains(Enums.ServiceTypes.Grouped))
-			throw new ArgumentException("No Grouped payment service for account bank");
+			return (false, "No Grouped payment service for account bank");
+
+		return (true, string.Empty);
 	}
 
 	public (bool HasService,string Message) CheckSingleService()

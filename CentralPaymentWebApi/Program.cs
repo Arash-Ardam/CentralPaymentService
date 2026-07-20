@@ -1,6 +1,7 @@
 using Application;
 using CentralPaymentWebApi.Configurations.Identity;
 using CentralPaymentWebApi.Configurations.OpenApi;
+using CentralPaymentWebApi.Handlers;
 using CentralPaymentWebApi.Middlewares;
 using CentralPaymentWebApi.MinimalApis;
 using Infrastructure.DataManagements;
@@ -27,6 +28,7 @@ builder.Services.Configure<JsonOptions>(options =>
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IIdempotencyHandler, IdempotencyHandler>();
 builder.Services.AddDataManagements(builder.Configuration);
 builder.Services.AddInfraServices(builder.Configuration);
 builder.Services.AddApplications();

@@ -30,16 +30,18 @@ public class Account
 	public void AssignToBank(Guid id) => BankId = id;
 	public void ChangeStatus(bool status) => IsEnable = status;
 
-	public void EnsureGroupedServiceAvailable()
+	public (bool IsAvailable,string ErrMessage) EnsureGroupedServiceAvailable()
 	{
 		if (!IsEnable)
-			throw new ArgumentException("account is disabled");
+			return (false, "account is disabled");
 
 		if (PaymentSettings.Batch is null || !PaymentSettings.Batch.IsEnable)
-			throw new ArgumentException("target account doesn't have batch payment settings or is disabled");
+			return (false, "target account doesn't have batch payment settings or is disabled");
 
 		if (PaymentSettings.Batch.ContractExpire < DateTimeOffset.Now)
-			throw new ArgumentException("The service is expired");
+			return (false, "The service is expired");
+
+		return (true, string.Empty);
 	}
 
 	public (bool IsAvailable, string Message) EnsureSingleServiceAvailable()

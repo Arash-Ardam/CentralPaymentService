@@ -182,5 +182,86 @@ namespace CentralPaymentWebApi.Abstractions
 				)
 			};
 		}
+
+
+
+		public static ApiResponse HandleApiResponse(this ApplicationResponse response)
+		{
+			return response.Status switch
+			{
+				ApplicationResultStatus.Created => new ApiResponse 
+				{
+					HttpResult = Results.Created(string.Empty, response.Message),
+					AppResponse = response
+				},
+				ApplicationResultStatus.Accepted => new ApiResponse 
+				{
+					HttpResult = Results.Accepted(string.Empty, response.Message),
+					AppResponse = response
+				},
+				ApplicationResultStatus.NotFound => new ApiResponse 
+				{
+					HttpResult = Results.NotFound(response.Message),
+					AppResponse = response
+				},
+				ApplicationResultStatus.ValidationError => new ApiResponse 
+				{
+					HttpResult = Results.BadRequest(response.Message),
+					AppResponse = response
+				},
+				ApplicationResultStatus.Exception => new ApiResponse 
+				{
+					HttpResult = Results.InternalServerError(response.Message),
+					AppResponse = response
+				},
+				_ => new ApiResponse
+				{
+					HttpResult = Results.BadRequest("an unhandled error"),
+					AppResponse = response
+				}
+			};
+		}
+
+		public static ApiResponse<T> HandleApiResponse<T>(this ApplicationResponse<T> response)
+		{
+			return response.Status switch
+			{
+				ApplicationResultStatus.Done => new ApiResponse<T>
+				{
+					HttpResult = Results.Ok(response.Data),
+					AppResponse = response
+				},
+				ApplicationResultStatus.Created => new ApiResponse<T>
+				{
+					HttpResult = Results.Created(string.Empty, response.Message),
+					AppResponse = response
+				},
+				ApplicationResultStatus.Accepted => new ApiResponse<T>
+				{
+					HttpResult = Results.Accepted(string.Empty, response.Data),
+					AppResponse = response
+				},
+				ApplicationResultStatus.NotFound => new ApiResponse<T>
+				{
+					HttpResult = Results.NotFound(response.Message),
+					AppResponse = response
+				},
+				ApplicationResultStatus.ValidationError => new ApiResponse<T>
+				{
+					HttpResult = Results.BadRequest(response.Message),
+					AppResponse = response
+				},
+				ApplicationResultStatus.Exception => new ApiResponse<T>
+				{
+					HttpResult = Results.InternalServerError(response.Message),
+					AppResponse = response
+				},
+				_ => new ApiResponse<T>
+				{
+					HttpResult = Results.BadRequest("an unhandled error"),
+					AppResponse = response
+				}
+			};
+		}
 	}
 }

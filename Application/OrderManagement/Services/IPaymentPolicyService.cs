@@ -5,6 +5,6 @@ namespace Application.OrderManagement.Services
 {
 	public interface IPaymentPolicyService
 	{
-		void ValidateGroupPaymentRequest(Account targetAccount,int numberOfTransactions,long totalAmount);
+		(bool IsValid,string ErrorMessage) ValidateGroupPaymentRequest(Account targetAccount,int numberOfTransactions,long totalAmount);
 	}
 }

@@ -4,6 +4,7 @@ using Application.Abstractions.Services;
 using Application.Accounting.AccountApp.Dtos;
 using Application.Accounting.AccountApp.Services;
 using Application.OrderManagement.Dtos.GroupedOrder;
+using Application.OrderManagement.Dtos.SingleOrder;
 using Application.OrderManagement.Enums;
 using Application.OrderManagement.Mappings;
 using Application.OrderManagement.Services;
@@ -60,37 +61,15 @@ internal class GroupedOrderApplication : IGroupedOrderApplication
 
 		try
 		{
-			var targetAccount = await _accountRepository.GetAsync(orderDto.AccountId);
-			if (targetAccount is null)
+			var validationResult = await ValidateOrderCreation(orderDto);
+			if (validationResult.IsFailed)
 			{
-				response.Message = "invalid account";
 				response.IsSuccess = false;
-				response.Status = ApplicationResultStatus.ValidationError;
+				response.Status = validationResult.Status;
+				response.Message = validationResult.Message;
 				return response;
 			}
-
-			var bank = await _bankRepository.GetAsync(targetAccount.BankId);
-			if (bank is null)
-			{
-				response.Message = "invalid bank";
-				response.IsSuccess = false;
-				response.Status = ApplicationResultStatus.ValidationError;
-				return response;
-			}
-
-			var customer = await _customerRepository.GetAsync(targetAccount.CustomerId);
-			if (customer is null)
-			{
-				response.Message = "invalid customer";
-				response.IsSuccess = false;
-				response.Status = ApplicationResultStatus.ValidationError;
-				return response;
-			}
-
-			bank.EnsureHasGroupedService();
-			targetAccount.EnsureGroupedServiceAvailable();
-			_paymentPolicyService.ValidateGroupPaymentRequest(targetAccount, orderDto.NumberOfTransactions, orderDto.TotalAmount);
-
+			var (targetAccount, customer) = validationResult.Data;
 			var order = OrderFactory.CreateGroup(orderDto.AccountId, orderDto.TotalAmount, orderDto.Description, orderDto.NumberOfTransactions);
 
 			var result = await _orderRepository.CreateAsync(order);
@@ -98,6 +77,7 @@ internal class GroupedOrderApplication : IGroupedOrderApplication
 			await PublishEvent(customer, targetAccount, order);
 
 			await _unitOfWork.SaveTenantChangesAsync();
+			await _unitOfWork.SaveAdminChangesAsync();
 
 			response.Message = "Grouped order drafted successfully";
 			response.Status = ApplicationResultStatus.Created;
@@ -155,7 +135,9 @@ internal class GroupedOrderApplication : IGroupedOrderApplication
 
 			await _orderRepository.UpdateAsync(targetOrder);
 			await PublishEvent(targetOrder, targetOrder.Specifics.Status, OutboxBehaviorType.AddTransactions);
+
 			await _unitOfWork.SaveTenantChangesAsync();
+			await _unitOfWork.SaveAdminChangesAsync();
 
 			response.Message = "Transactions added successfully";
 			response.Status = ApplicationResultStatus.Accepted;
@@ -192,6 +174,7 @@ internal class GroupedOrderApplication : IGroupedOrderApplication
 			await PublishEvent(targetOrder, targetOrder.Specifics.Status, OutboxBehaviorType.RemoveTransaction, paymentId);
 
 			await _unitOfWork.SaveTenantChangesAsync();
+			await _unitOfWork.SaveAdminChangesAsync();
 
 			response.Message = "Transaction removed successfully";
 			response.Status = ApplicationResultStatus.Accepted;
@@ -216,6 +199,9 @@ internal class GroupedOrderApplication : IGroupedOrderApplication
 			targetOrder.RemoveGroupedRangeTransactions(transactionIds);
 
 			await _orderRepository.UpdateAsync(targetOrder);
+
+			await _unitOfWork.SaveTenantChangesAsync();
+			await _unitOfWork.SaveAdminChangesAsync();
 
 			response.Message = "Transactions removed successfully";
 			return response;
@@ -248,6 +234,8 @@ internal class GroupedOrderApplication : IGroupedOrderApplication
 			await PublishEvent(targetOrder, targetOrder.Specifics.Status, OutboxBehaviorType.Submit);
 
 			await _unitOfWork.SaveTenantChangesAsync();
+			await _unitOfWork.SaveAdminChangesAsync();
+
 			response.Message = "Order finalized and ready to proccess";
 			response.Status = ApplicationResultStatus.Accepted;
 			return response;
@@ -302,6 +290,7 @@ internal class GroupedOrderApplication : IGroupedOrderApplication
 			await _orderRepository.UpdateAsync(order);
 
 			await _unitOfWork.SaveTenantChangesAsync();
+			await _unitOfWork.SaveAdminChangesAsync();
 
 			applicationResponse.Message = response.Message;
 			applicationResponse.IsSuccess = response.IsSuccess;
@@ -353,6 +342,7 @@ internal class GroupedOrderApplication : IGroupedOrderApplication
 				await _orderRepository.UpdateAsync(order);
 
 				await _unitOfWork.SaveTenantChangesAsync();
+				await _unitOfWork.SaveAdminChangesAsync();
 			}
 
 			applicationResponse.Message = response.Message;
@@ -525,15 +515,12 @@ internal class GroupedOrderApplication : IGroupedOrderApplication
 				TenantName = oldEvent.TenantName,
 				Payload = string.IsNullOrWhiteSpace(payload) ? Enum.GetName(status) : payload
 			});
-
-			await _unitOfWork.SaveAdminChangesAsync();
-
 		}
 	}
 
 	private Task PublishEvent(Customer customer, Account account, Order order)
 	{
-		_outboxMessageService.PublishAsync(new OutboxMessageDto
+		return _outboxMessageService.PublishAsync(new OutboxMessageDto
 		{
 			OutboxId = order.OrderId,
 			Type = OutBoxType.GroupedOrder,
@@ -554,7 +541,6 @@ internal class GroupedOrderApplication : IGroupedOrderApplication
 			})
 		});
 
-		return _unitOfWork.SaveAdminChangesAsync();
 	}
 
 
@@ -576,5 +562,67 @@ internal class GroupedOrderApplication : IGroupedOrderApplication
 		return (targetOrder, bank, account, customer);
 	}
 
-	
+
+	private async Task<ApplicationResponse<(Account TargetAccount, Customer TargetCustomer)>> ValidateOrderCreation(CreateGroupedOrderDto orderDto)
+	{
+		var response = new ApplicationResponse<(Account TargetAccount, Customer TargetCustomer)>() { IsSuccess = true };
+
+		var targetAccount = await _accountRepository.GetAsync(orderDto.AccountId);
+		if (targetAccount is null)
+		{
+			response.Message = "invalid account";
+			response.IsSuccess = false;
+			response.Status = ApplicationResultStatus.ValidationError;
+			return response;
+		}
+
+		var bank = await _bankRepository.GetAsync(targetAccount.BankId);
+		if (bank is null)
+		{
+			response.Message = "invalid bank";
+			response.IsSuccess = false;
+			response.Status = ApplicationResultStatus.ValidationError;
+			return response;
+		}
+
+		var customer = await _customerRepository.GetAsync(targetAccount.CustomerId);
+		if (customer is null)
+		{
+			response.Message = "invalid customer";
+			response.IsSuccess = false;
+			response.Status = ApplicationResultStatus.ValidationError;
+			return response;
+		}
+
+		var(hasService, errorMessage) =bank.EnsureHasGroupedService();
+		if (!hasService)
+		{
+			response.IsSuccess = false;
+			response.Status = ApplicationResultStatus.ValidationError;
+			response.Message = errorMessage;
+			return response;
+		}
+
+		(hasService, errorMessage)  = targetAccount.EnsureGroupedServiceAvailable();
+		if (!hasService)
+		{
+			response.IsSuccess = false;
+			response.Status = ApplicationResultStatus.ValidationError;
+			response.Message = errorMessage;
+			return response;
+		}
+		var validationResult = _paymentPolicyService.ValidateGroupPaymentRequest(targetAccount, orderDto.NumberOfTransactions, orderDto.TotalAmount);
+		if (!validationResult.IsValid)
+		{
+			response.IsSuccess = false;
+			response.Status = ApplicationResultStatus.ValidationError;
+			response.Message = validationResult.ErrorMessage;
+			return response;
+		}
+
+
+		response.Data = (targetAccount, customer);
+		return response;
+	}
+
 }

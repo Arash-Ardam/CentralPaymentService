@@ -123,7 +123,9 @@ namespace Application.OrderManagement
 				await _orderRepository.UpdateAsync(targerOrder);
 				await PublishEvent(targerOrder, OrderStatus.Drafted, OutboxBehaviorType.AddSpecs);
 
+				// order publish consistency
 				await _unitOfWork.SaveTenantChangesAsync();
+				await _unitOfWork.SaveAdminChangesAsync();
 
 				response.Data = targerOrder.Id;
 				response.Status = ApplicationResultStatus.Accepted;
@@ -158,8 +160,9 @@ namespace Application.OrderManagement
 				await _orderRepository.UpdateAsync(targerOrder);
 				await PublishEvent(targerOrder, OrderStatus.Drafted, OutboxBehaviorType.AddSpecs);
 
-
+				// order publish consistency
 				await _unitOfWork.SaveTenantChangesAsync();
+				await _unitOfWork.SaveAdminChangesAsync();
 
 				response.Message = "transaction removed successfully";
 				response.Status = ApplicationResultStatus.Accepted;
@@ -192,8 +195,10 @@ namespace Application.OrderManagement
 
 				await _orderRepository.UpdateAsync(targerOrder);
 				await PublishEvent(targerOrder, OrderStatus.Submited, OutboxBehaviorType.Submit);
-								
+
+				// order publish consistency
 				await _unitOfWork.SaveTenantChangesAsync();
+				await _unitOfWork.SaveAdminChangesAsync();
 
 				response.Message = "order finalized and ready to proccess";
 				response.Status = ApplicationResultStatus.Accepted;
@@ -249,7 +254,9 @@ namespace Application.OrderManagement
 				await _orderRepository.UpdateAsync(order);
 				await PublishEvent(order, OrderStatus.Pending, OutboxBehaviorType.SentToBank);
 
+				// order publish consistency
 				await _unitOfWork.SaveTenantChangesAsync();
+				await _unitOfWork.SaveAdminChangesAsync();
 
 				applicationResponse.IsSuccess = providerResponse.IsSuccess;
 				applicationResponse.Status = ApplicationResultStatus.Accepted;
@@ -303,7 +310,10 @@ namespace Application.OrderManagement
 				}
 
 				await PublishEvent(order, order.Specifics.Status, OutboxBehaviorType.Inquiry);
+
+				// order publish consistency
 				await _unitOfWork.SaveTenantChangesAsync();
+				await _unitOfWork.SaveAdminChangesAsync();
 
 				applicationResponse.IsSuccess = response.IsSuccess;
 				applicationResponse.Status = ApplicationResultStatus.Accepted;

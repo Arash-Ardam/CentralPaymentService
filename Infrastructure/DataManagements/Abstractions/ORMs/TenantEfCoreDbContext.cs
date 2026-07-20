@@ -1,4 +1,5 @@
 ﻿using Domain.Order;
+using Infrastructure.DataManagements.Configurations.Idempotency;
 using Infrastructure.DataManagements.Configurations.Order;
 using Infrastructure.DataManagements.DataModels;
 using Microsoft.EntityFrameworkCore;
@@ -15,6 +16,8 @@ namespace Infrastructure.DataManagements.Abstractions.ORMs
 		public DbSet<SingleOrderReportModel> SingleOrderReports => Set<SingleOrderReportModel>();
 		public DbSet<GroupedOrderReportModel> GroupedOrderReports => Set<GroupedOrderReportModel>();
 		public DbSet<GroupedOrderTransactionReportModel> GroupedTransactionsReports => Set<GroupedOrderTransactionReportModel>();
+		public DbSet<IdempotencyModel> IdempotencyRequests => Set<IdempotencyModel>();
+
 		protected override void OnModelCreating(ModelBuilder modelBuilder)
 		{
 			modelBuilder.ApplyConfiguration(new GroupedTransactionConfiguration());
@@ -23,6 +26,7 @@ namespace Infrastructure.DataManagements.Abstractions.ORMs
 			modelBuilder.ApplyConfiguration(new SingleOrderReportConfiguration());
 			modelBuilder.ApplyConfiguration(new GroupedOrderReportConfiguration());
 			modelBuilder.ApplyConfiguration(new GroupedOrderTranactionsReportConfiguration());
+			modelBuilder.ApplyConfiguration(new IdempotencyDataConfiguration());
 
 			base.OnModelCreating(modelBuilder);
 		}

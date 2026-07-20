@@ -7,13 +7,13 @@ namespace Infrastructure.Services.Idempotency
 {
 	internal sealed class IdempotencyService : IIdempotencyService
 	{
-		public IdempotencyService(AdminEfCoreDbContext dbContext, IMapper mapper)
+		public IdempotencyService(TenantEfCoreDbContext dbContext, IMapper mapper)
 		{
 			_dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
 			_mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
 		}
 
-		private readonly AdminEfCoreDbContext _dbContext;
+		private readonly TenantEfCoreDbContext _dbContext;
 		private readonly IMapper _mapper;
 
 		public async Task<IdempotencyDto> AddIdempotentRequest(CreateIdempotencyRequestDto dto)
