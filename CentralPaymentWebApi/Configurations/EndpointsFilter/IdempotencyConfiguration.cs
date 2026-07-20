@@ -8,6 +8,12 @@ namespace CentralPaymentWebApi.Configurations.EndpointsFilter
 		{
 			builder.AddEndpointFilter<IdempotencyEndpointFilter>();
 			return builder;
-		} 
+		}
+
+		public static RouteHandlerBuilder RequireIdempotency<T>(this RouteHandlerBuilder builder)
+		{
+			builder.AddEndpointFilter<IdempotencyEndpointFilter<T>>();
+			return builder;
+		}
 	}
 }

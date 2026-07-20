@@ -45,7 +45,7 @@ namespace CentralPaymentWebApi.MinimalApis.Payment
 				.WithDisplayName("CreateSinglePayment")
 				.WithSummary("ایجاد دستور پرداخت تکی جدید")
 				.WithDescription("این متد یک دستور پرداخت تکی جدید با توجه به حساب پرداختی با وضعیت پیش نویس ایجاد می کند")
-				.RequireIdempotency()
+				.RequireIdempotency<Guid>()
 				.Produces(StatusCodes.Status201Created)
 				.Produces<string>(StatusCodes.Status404NotFound)
 				.Produces<string>(StatusCodes.Status400BadRequest)

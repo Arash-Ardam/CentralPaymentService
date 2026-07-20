@@ -7,5 +7,6 @@
 		IResult? GetCachedResult();
 
 		Task<IResult> EndRequestAsync(object? endpointResult);
+		Task<IResult> EndRequestAsync<T>(object? endpointResult);
 	}
 }

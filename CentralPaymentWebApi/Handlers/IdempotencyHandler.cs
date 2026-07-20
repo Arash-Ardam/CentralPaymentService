@@ -102,7 +102,7 @@ namespace CentralPaymentWebApi.Handlers
 		public IResult? GetCachedResult()
 			=> _cachedResult;
 
-		public async Task<IResult> EndRequestAsync<T>(T endpointResult)
+		public async Task<IResult> EndRequestAsync<T>(object? endpointResult)
 		{
 			if (endpointResult is not ApiResponse<T> response)
 				return Results.Conflict("Endpoint result type conflicts");
