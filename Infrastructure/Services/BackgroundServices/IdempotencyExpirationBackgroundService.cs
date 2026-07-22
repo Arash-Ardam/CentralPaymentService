@@ -26,27 +26,23 @@ namespace Infrastructure.Services.BackgroundServices
 			{
 				using var scope = _serviceFactory.CreateScope();
 
-				var tenantRegistryService = scope.ServiceProvider.GetService<ITenantRegistryService>();
-				var tenantDb =scope.ServiceProvider.GetService<TenantEfCoreDbContext>();
-				var tenantResolver = scope.ServiceProvider.GetService<ITenantResolver>();
-				var efcoreOptions = scope.ServiceProvider.GetService<IOptions<EfCoreOptions>>();
+				var tenantRegistryService = scope.ServiceProvider.GetRequiredService<ITenantRegistryService>();
+				var tenantDb =scope.ServiceProvider.GetRequiredService<TenantEfCoreDbContext>();
+				var tenantResolver = scope.ServiceProvider.GetRequiredService<ITenantResolver>();
+				var efcoreOptions = scope.ServiceProvider.GetRequiredService<IOptions<ORMToolsOptions>>();
 				var connectionString = string.Empty;
 
-				foreach (var item in tenantRegistryService.GetAll())
+				foreach (var tenant in tenantRegistryService.GetAll())
 				{
-					connectionString = string.IsNullOrWhiteSpace(item.ConnectionString) ? string.Format(efcoreOptions.Value.TenantConnectionString,item.Name) : item.ConnectionString;
-					tenantDb.SetConnectionString(connectionString);
+					tenantDb.SetConnectionString(
+					string.IsNullOrWhiteSpace(tenant.ConnectionString)
+						   ? string.Format(efcoreOptions.Value.EfCore.TenantConnectionString, tenant.Name)
+						   : tenant.ConnectionString);
 
-					var expiredIdempotentRequests = tenantDb.IdempotencyRequests
-					.Where(x => x.ExpiresAt <= DateTimeOffset.UtcNow);
-
-					if (expiredIdempotentRequests.Any())
-						tenantDb.IdempotencyRequests.RemoveRange(expiredIdempotentRequests);
+					await tenantDb.IdempotencyRequests
+						.Where(x => x.ExpiresAt <= DateTimeOffset.UtcNow)
+						.ExecuteDeleteAsync(stoppingToken);
 				}
-
-
-			
-
 				await Task.Delay(TimeSpan.FromMinutes(20), stoppingToken);
 			}
 		}

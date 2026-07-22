@@ -27,13 +27,7 @@ namespace Infrastructure.DataManagements.Configurations.Idempotency
 				.IsRequired(false);
 
 			builder
-				.Property(x => x.StatusCode)
-				.IsRequired(false);
-
-			builder
-				.Property(x => x.CreatedAt)
-				.HasDefaultValue(DateTimeOffset.UtcNow);
-				
+				.Property(x => x.CreatedAt);
 		}
 	}
 

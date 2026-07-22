@@ -1,5 +1,4 @@
 ﻿using CentralPaymentWebApi.Abstractions;
-using CentralPaymentWebApi.Handlers;
 
 namespace CentralPaymentWebApi.EndpointFilters
 {

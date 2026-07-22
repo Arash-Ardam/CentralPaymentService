@@ -35,6 +35,9 @@ namespace CentralPaymentWebApi.Handlers
 
 			context.Request.EnableBuffering();
 
+			context.Request.Body.Position = 0;
+
+
 			using var reader = new StreamReader(
 				context.Request.Body,
 				leaveOpen: true);

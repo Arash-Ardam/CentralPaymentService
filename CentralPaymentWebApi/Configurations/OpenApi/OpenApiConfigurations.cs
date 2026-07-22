@@ -46,6 +46,7 @@ namespace CentralPaymentWebApi.Configurations.OpenApi
 
 					return Task.CompletedTask;
 				});
+				options.AddOperationTransformer<IdempotencyOperationsTransformer>();
 
 			});
 

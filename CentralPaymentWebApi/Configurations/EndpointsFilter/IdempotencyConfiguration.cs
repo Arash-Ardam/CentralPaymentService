@@ -1,19 +1,28 @@
 ﻿using CentralPaymentWebApi.EndpointFilters;
+using Microsoft.OpenApi;
 
-namespace CentralPaymentWebApi.Configurations.EndpointsFilter
+namespace CentralPaymentWebApi.Configurations.EndpointsFilter;
+
+public static class IdempotencyConfiguration
 {
-	public static class IdempotencyConfiguration
+	public static RouteHandlerBuilder RequireIdempotency(this RouteHandlerBuilder builder)
 	{
-		public static RouteHandlerBuilder RequireIdempotency(this RouteHandlerBuilder builder)
-		{
-			builder.AddEndpointFilter<IdempotencyEndpointFilter>();
-			return builder;
-		}
+		builder.AddEndpointFilter<IdempotencyEndpointFilter>();
 
-		public static RouteHandlerBuilder RequireIdempotency<T>(this RouteHandlerBuilder builder)
-		{
-			builder.AddEndpointFilter<IdempotencyEndpointFilter<T>>();
-			return builder;
-		}
+		builder.WithMetadata(new RequireIdempotencyMetadata());
+
+		return builder;
+	}
+
+	public static RouteHandlerBuilder RequireIdempotency<T>(this RouteHandlerBuilder builder)
+	{
+		builder.AddEndpointFilter<IdempotencyEndpointFilter<T>>();
+
+		builder.WithMetadata(new RequireIdempotencyMetadata());
+
+		return builder;
 	}
 }
+
+
+public class RequireIdempotencyMetadata { }
