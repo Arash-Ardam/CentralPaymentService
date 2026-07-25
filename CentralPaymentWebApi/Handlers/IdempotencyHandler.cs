@@ -1,6 +1,9 @@
 ﻿using Application.Abstractions;
 using CentralPaymentWebApi.Abstractions;
+using Infrastructure.Helpers;
 using Infrastructure.Services.Idempotency;
+using System.Reflection;
+using System.Security.Claims;
 using System.Text.Json;
 
 namespace CentralPaymentWebApi.Handlers
@@ -18,12 +21,12 @@ namespace CentralPaymentWebApi.Handlers
 			_service = service;
 		}
 
-		public async Task<bool> BeginRequestAsync(HttpContext context)
+		public async Task<bool> BeginRequestAsync(EndpointFilterInvocationContext context)
 		{
-			if (!context.User.IsInRole("User"))
+			if (!context.HttpContext.User.IsInRole("User"))
 				return true;
 
-			var key = context.Request.Headers["Idempotency-Key"].ToString();
+			var key = context.HttpContext.Request.Headers["Idempotency-Key"].ToString();
 
 			if (string.IsNullOrWhiteSpace(key))
 			{
@@ -33,18 +36,14 @@ namespace CentralPaymentWebApi.Handlers
 				return false;
 			}
 
-			context.Request.EnableBuffering();
+			var bodyObject = context.Arguments.Where(a => 
+				a is not HttpContext &&
+				a is not CancellationToken &&
+				a is not ClaimsPrincipal &&
+				a is not IServiceProvider)
+				.ToArray();
 
-			context.Request.Body.Position = 0;
-
-
-			using var reader = new StreamReader(
-				context.Request.Body,
-				leaveOpen: true);
-
-			var body = await reader.ReadToEndAsync();
-
-			context.Request.Body.Position = 0;
+			var body = HashConvertor.ConvertToHash(bodyObject);
 
 			if (await _service.AnyWithDifferentBodyAsync(key, body))
 			{

@@ -2,7 +2,7 @@
 {
 	public interface IIdempotencyHandler
 	{
-		Task<bool> BeginRequestAsync(HttpContext context);
+		Task<bool> BeginRequestAsync(EndpointFilterInvocationContext context);
 
 		IResult? GetCachedResult();
 

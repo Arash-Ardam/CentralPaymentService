@@ -23,7 +23,7 @@ namespace Infrastructure.Services.Idempotency
 			var result = await _dbContext.AddAsync(model);
 			await _dbContext.SaveChangesAsync();
 
-			return _mapper.Map<IdempotencyDto>(result);
+			return _mapper.Map<IdempotencyDto>(model);
 		}
 
 		public Task<bool> AnyWithDifferentBodyAsync(string key, string body) =>
@@ -46,22 +46,24 @@ namespace Infrastructure.Services.Idempotency
 			if (model == default) throw new ArgumentNullException("invalidKey");
 
 			_dbContext.IdempotencyRequests.Remove(model);
+			await _dbContext.SaveChangesAsync();
 		}
 
 		public async Task<IdempotencyDto> UpdateIdempotentRequest(UpdateIdempotencyRequestDto idempotencyDto)
 		{
 			var model = await _dbContext.IdempotencyRequests.FirstOrDefaultAsync(x => x.Id == idempotencyDto.Id);
-
+			
 			if (model is null)
 				throw new KeyNotFoundException("idempotent Id is invalid");
 
 			var dto = IdempotencyRequestFactory.MarkRequest(idempotencyDto);
+			dto.CreatedAt = model.CreatedAt;
 			model = _mapper.Map(dto,model);
 			var result = _dbContext.IdempotencyRequests.Update(model);
 
 			await _dbContext.SaveChangesAsync();
 
-			return _mapper.Map<IdempotencyDto>(result);
+			return _mapper.Map<IdempotencyDto>(model);
 		}
 	}
 }

@@ -36,11 +36,10 @@ namespace Infrastructure.DataManagements.Configurations.Idempotency
 	{
 		public RequestBodyConvertor() : base(
 			v => ConvertToDatabase(v),
-			v => ConvertFromDatabase(v))
+			v => v)
 		{
 		}
 		private static string ConvertToDatabase(string value) => HashConvertor.ConvertToHash(value);
-		private static string ConvertFromDatabase(string value) => HashConvertor.ConvertFromHash(value);
 	}
 
 }

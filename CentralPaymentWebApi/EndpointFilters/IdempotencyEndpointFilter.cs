@@ -10,8 +10,8 @@ namespace CentralPaymentWebApi.EndpointFilters
 			var handler =
 		   context.HttpContext.RequestServices
 			   .GetRequiredService<IIdempotencyHandler>();
-
-			var canContinue = await handler.BeginRequestAsync(context.HttpContext);
+			
+			var canContinue = await handler.BeginRequestAsync(context);
 
 			if (!canContinue)
 				return handler.GetCachedResult();
@@ -30,7 +30,7 @@ namespace CentralPaymentWebApi.EndpointFilters
 		   context.HttpContext.RequestServices
 			   .GetRequiredService<IIdempotencyHandler>();
 
-			var canContinue = await handler.BeginRequestAsync(context.HttpContext);
+			var canContinue = await handler.BeginRequestAsync(context);
 
 			if (!canContinue)
 				return handler.GetCachedResult();
