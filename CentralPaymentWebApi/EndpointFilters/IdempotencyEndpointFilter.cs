@@ -1,5 +1,4 @@
-﻿using CentralPaymentWebApi.Abstractions;
-using CentralPaymentWebApi.Handlers;
+﻿using CentralPaymentWebApi.Handlers;
 
 namespace CentralPaymentWebApi.EndpointFilters
 {
@@ -10,7 +9,7 @@ namespace CentralPaymentWebApi.EndpointFilters
 			var handler =
 		   context.HttpContext.RequestServices
 			   .GetRequiredService<IIdempotencyHandler>();
-			
+
 			var canContinue = await handler.BeginRequestAsync(context);
 
 			if (!canContinue)

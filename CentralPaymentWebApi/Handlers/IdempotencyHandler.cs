@@ -23,9 +23,6 @@ namespace CentralPaymentWebApi.Handlers
 
 		public async Task<bool> BeginRequestAsync(EndpointFilterInvocationContext context)
 		{
-			if (!context.HttpContext.User.IsInRole("User"))
-				return true;
-
 			var key = context.HttpContext.Request.Headers["Idempotency-Key"].ToString();
 
 			if (string.IsNullOrWhiteSpace(key))
@@ -40,7 +37,8 @@ namespace CentralPaymentWebApi.Handlers
 				a is not HttpContext &&
 				a is not CancellationToken &&
 				a is not ClaimsPrincipal &&
-				a is not IServiceProvider)
+				a is not IServiceProvider&&
+				a is not IServiceCollection)
 				.ToArray();
 
 			var body = HashConvertor.ConvertToHash(bodyObject);
