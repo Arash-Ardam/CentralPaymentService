@@ -55,4 +55,19 @@ public static class IdentityProviderConfiguration
 			});
 		});
 	}
+
+
+	public static void AddApiCores(this WebApplicationBuilder builder)
+	{
+		builder.Services.AddCors(setup =>
+		{
+			setup.AddPolicy("centralPayment-UI", policy =>
+			{
+				policy
+					.WithOrigins("http://localhost:5173")
+					.WithHeaders(["Content-Type", "Idempotency-Key", "Authorization"])
+					.WithMethods(["GET", "POST", "PUT", "DELETE"]);
+			});
+		});
+	}
 }

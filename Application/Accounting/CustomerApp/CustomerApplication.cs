@@ -47,6 +47,7 @@ namespace Application.Accounting.CustomerApp
 
 				await _outboxMessageService.PublishAsync(new OutboxMessageDto
 				{
+					OutboxId = createdCustomerId.ToString(),
 					TenantId = createdCustomerId,
 					TenantName = customer.TenantName,
 					Type = OutBoxType.Customer,
@@ -91,6 +92,10 @@ namespace Application.Accounting.CustomerApp
 				var customerInfo = infoFactory.Build();
 
 				targetCustomer.SetInformation(customerInfo);
+				targetCustomer.SetStatus(informationDto.isEnable);
+				
+				if(!string.IsNullOrWhiteSpace(informationDto.ConnectionString))
+					targetCustomer.SetConnectionString(informationDto.ConnectionString);
 
 				await _customerRepository.EditAsync(targetCustomer);
 
@@ -116,7 +121,7 @@ namespace Application.Accounting.CustomerApp
 				Customer targetCustomer = await _customerRepository.GetAsync(customerId)
 					?? throw new ArgumentException("given target Customer is not excists");
 
-				targetCustomer.ChangeStatus(status);
+				targetCustomer.SetStatus(status);
 
 				await _customerRepository.EditAsync(targetCustomer);
 

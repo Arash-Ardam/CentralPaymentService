@@ -23,9 +23,8 @@ public class Customer
 
 	public void SetInformation(CustomerInformation info) => Info = info;
 
-	public void ChangeStatus(bool status) => IsEnable = status;
+	public void SetStatus(bool status) => IsEnable = status;
 
-	
-
+	public void SetConnectionString(string value) => ConnectionString = value;
 
 }

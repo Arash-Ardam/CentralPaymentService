@@ -35,13 +35,14 @@ builder.Services.AddApplications();
 builder.AddOpenApiConfigs();
 builder.AddApiAuthentication();
 builder.AddApiAuthorization();
+builder.AddApiCores();
 
 var app = builder.Build();
 
+app.UseCors("centralPayment-UI");
 app.UseAuthentication();
 app.UseHttpsRedirection();
 app.UseAuthorization();
-
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
